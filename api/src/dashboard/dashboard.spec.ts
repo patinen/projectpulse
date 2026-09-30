@@ -45,6 +45,37 @@ describe('DashboardService', () => {
     expect(aggregationService.buildDashboard).not.toHaveBeenCalled();
     expect(snapshotService.saveSnapshot).not.toHaveBeenCalled();
   });
+
+  it('falls back to live aggregation when no snapshot exists and preserves the generatedAt timestamp', async () => {
+    const dashboard = {
+      generatedAt: '2026-09-30T00:00:00.000Z',
+      metrics: { openIssues: 1, openPullRequests: 2, commits7d: 3, activeContributors30d: 4 },
+      repositories: [],
+      recentActivity: [],
+    };
+
+    const prisma: any = {
+      trackedRepository: { findMany: vi.fn().mockResolvedValue([{ repository: { id: 'repo-1' } }]) },
+    };
+
+    const aggregationService: any = {
+      buildDashboard: vi.fn().mockResolvedValue(dashboard),
+    };
+
+    const snapshotService: any = {
+      getLatestSnapshot: vi.fn().mockResolvedValue(null),
+      saveSnapshot: vi.fn().mockResolvedValue({ id: 'snapshot-1' }),
+    };
+
+    const service = new DashboardService(prisma, aggregationService, snapshotService);
+    const result = await service.getDashboard('user-1');
+
+    expect(aggregationService.buildDashboard).toHaveBeenCalledTimes(1);
+    expect(aggregationService.buildDashboard).toHaveBeenCalledWith('user-1');
+    expect(snapshotService.saveSnapshot).toHaveBeenCalledWith('user-1', dashboard);
+    expect(result).toEqual(dashboard);
+    expect(result.generatedAt).toBe(dashboard.generatedAt);
+  });
 });
 
 describe('DashboardController', () => {
@@ -52,5 +83,32 @@ describe('DashboardController', () => {
     const guards = Reflect.getMetadata(GUARDS_METADATA, DashboardController);
 
     expect(guards).toContain(AuthGuard);
+  });
+
+  it('returns queued when enqueue succeeds', async () => {
+    const dashboardService: any = {
+      getDashboard: vi.fn(),
+    };
+
+    const queueService: any = {
+      enqueueUserSync: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const controller = new DashboardController(dashboardService, queueService);
+    await expect(controller.refreshDashboard({ user: { id: 'user-1' } } as any)).resolves.toEqual({ status: 'queued' });
+    expect(queueService.enqueueUserSync).toHaveBeenCalledWith('user-1');
+  });
+
+  it('rejects when queue enqueue fails', async () => {
+    const dashboardService: any = {
+      getDashboard: vi.fn(),
+    };
+
+    const queueService: any = {
+      enqueueUserSync: vi.fn().mockRejectedValue(new Error('redis down')),
+    };
+
+    const controller = new DashboardController(dashboardService, queueService);
+    await expect(controller.refreshDashboard({ user: { id: 'user-1' } } as any)).rejects.toThrow('Dashboard refresh could not be queued right now.');
   });
 });

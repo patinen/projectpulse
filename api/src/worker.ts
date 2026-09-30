@@ -2,17 +2,13 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { Worker } from 'bullmq';
-import { DashboardAggregationService } from './dashboard/dashboard-aggregation.service.js';
-import { DashboardSnapshotService } from './dashboard/dashboard-snapshot.service.js';
 import { DashboardSyncProcessor } from './queue/dashboard-sync-processor.service.js';
 import { WorkerModule } from './worker.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(WorkerModule);
   const configService = app.get(ConfigService);
-  const aggregationService = app.get(DashboardAggregationService);
-  const snapshotService = app.get(DashboardSnapshotService);
-  const processor = new DashboardSyncProcessor(aggregationService, snapshotService);
+  const processor = app.get(DashboardSyncProcessor);
   const logger = new Logger('DashboardWorker');
 
   const redisUrl = configService.get<string>('REDIS_URL', 'redis://localhost:6379');

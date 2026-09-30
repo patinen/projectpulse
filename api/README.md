@@ -119,16 +119,18 @@ Required environment variables:
 Generate the session and encryption secrets locally with Node:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
 Set them as:
 
 ```bash
-AUTH_SESSION_SECRET=<generated-secret>
-GITHUB_TOKEN_ENCRYPTION_KEY=<generated-secret>
+AUTH_SESSION_SECRET=<generated-base64-secret>
+GITHUB_TOKEN_ENCRYPTION_KEY=<generated-base64-secret>
 ```
+
+`GITHUB_TOKEN_ENCRYPTION_KEY` is decoded with `Buffer.from(value, 'base64')` and must resolve to exactly 32 bytes. Use a base64 string for both values for simplicity; do not commit real secrets.
 
 ### Repository access
 
