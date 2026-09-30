@@ -18,6 +18,7 @@ type TrackedRepositoryRef = {
 type RepositorySnapshot = {
   repository: DashboardRepositorySummary;
   recentActivity: DashboardActivity[];
+  activeContributorLogins: string[];
 };
 
 @Injectable()
@@ -87,10 +88,8 @@ export class DashboardService {
 
     const contributorLogins = new Set<string>();
     for (const snapshot of validSnapshots) {
-      for (const event of snapshot.recentActivity) {
-        if (event.kind === 'commit pushed' && event.actor) {
-          contributorLogins.add(event.actor);
-        }
+      for (const login of snapshot.activeContributorLogins) {
+        contributorLogins.add(login);
       }
     }
     metrics.activeContributors30d = contributorLogins.size;
@@ -168,9 +167,16 @@ export class DashboardService {
     ].sort((left, right) => new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime())
       .slice(0, 10);
 
+    const activeContributorLogins = [...new Set(
+      commits
+        .map((commit) => commit.authorLogin)
+        .filter((login): login is string => Boolean(login)),
+    )];
+
     return {
       repository: repositorySummary,
       recentActivity,
+      activeContributorLogins,
     };
   }
 
