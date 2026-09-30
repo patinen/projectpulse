@@ -1,7 +1,10 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthGuard } from '../auth/auth.guard.js';
 import { AuthService } from '../auth/auth.service.js';
 import { GitHubService } from '../github/github.service.js';
+import { RepositoriesController } from './repositories.controller.js';
 import { RepositoryService } from './repositories.service.js';
 
 describe('GitHubService', () => {
@@ -428,6 +431,14 @@ describe('RepositoryService', () => {
     prisma.repository.findUnique.mockResolvedValue(null);
     await expect(service.untrackRepository('user-2', 'missing')).resolves.toBeUndefined();
     expect(prisma.trackedRepository.deleteMany).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RepositoriesController', () => {
+  it('controller-level AuthGuard metadata is present', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, RepositoriesController);
+
+    expect(guards).toContain(AuthGuard);
   });
 });
 

@@ -2,30 +2,58 @@
 
 This is the ProjectPulse NestJS API.
 
+## Architecture
+
+```text
+HTTP API
+    |
+    +--> PostgreSQL snapshots
+    |
+    +--> Redis / BullMQ
+              |
+              v
+        background worker
+              |
+              v
+           GitHub API
+```
+
+The dashboard is now snapshot-backed. The HTTP API reads the latest persisted dashboard snapshot from PostgreSQL, while a background worker refreshes the data in Redis/BullMQ and stores the result as a new snapshot for later use.
+
 ## Local development
 
 ```bash
-npm install
+docker compose up -d
 npm run start:dev
+npm run start:worker:dev
 ```
 
-Default URL: http://localhost:3001
+From the web app directory:
+
+```bash
+cd ../web
+npm run dev
+```
+
+Default API URL: http://localhost:3001
+
+## Dashboard synchronization behavior
+
+- Dashboard snapshots are synchronized every 15 minutes.
+- Tracking and untracking a repository queues an immediate refresh.
+- Normal dashboard loads read PostgreSQL instead of calling GitHub.
+- The first dashboard load may perform one live fallback sync if no snapshot yet exists.
+- Historical snapshots are retained for future trend reporting.
+- Retention cleanup is intentionally not implemented yet.
 
 ## Endpoints
 
 - `GET /health`
 - `GET /dashboard`
-
-The dashboard aggregates live GitHub metrics from the authenticated user's tracked public repositories.
-
-Metric definitions:
-
-- Open issues: real GitHub issues only; pull requests are excluded from this count.
-- Open pull requests: currently open pull requests across tracked repositories.
-- Commits (7d): commits in tracked repositories during the last 7 days.
-- Active contributors: distinct GitHub commit authors active in tracked repositories during the last 30 days.
-
-Analytics are calculated live from the GitHub API for the current tracked set and are not yet historical snapshots.
+- `POST /dashboard/refresh`
+- `GET /repositories`
+- `POST /repositories/:githubId/track`
+- `DELETE /repositories/:githubId/track`
 
 ## Environment
 
@@ -34,6 +62,7 @@ Set the following environment variables as needed:
 - `PORT` for the API listen port (default: `3001`)
 - `CORS_ORIGIN` for allowed frontend origins
 - `DATABASE_URL` for PostgreSQL connectivity
+- `REDIS_URL` for the BullMQ queue connection
 
 Example:
 
@@ -41,46 +70,29 @@ Example:
 PORT=3001
 CORS_ORIGIN=http://localhost:3000
 DATABASE_URL=postgresql://projectpulse:projectpulse@localhost:5432/projectpulse?schema=public
+REDIS_URL=redis://localhost:6379
 ```
 
-## Local PostgreSQL
+## Local infrastructure
 
-Local development:
-
-```bash
-npm run db:migrate
-```
-
-Production or staging deployment:
-
-```bash
-npm run db:deploy
-```
-
-1. Start PostgreSQL from the API folder:
+Start the database and queue dependencies:
 
 ```bash
 docker compose up -d
 ```
 
-2. Create `api/.env` from `.env.example`.
-
-3. Run the local Prisma migration:
+Generate the Prisma client and run migrations:
 
 ```bash
+npm run db:generate
 npm run db:migrate
 ```
 
-4. Start the API:
+Start the API and worker separately:
 
 ```bash
 npm run start:dev
-```
-
-To stop the local database:
-
-```bash
-docker compose down
+npm run start:worker:dev
 ```
 
 The frontend app lives in `../web`.
@@ -88,12 +100,6 @@ The frontend app lives in `../web`.
 ## GitHub OAuth
 
 ProjectPulse uses a GitHub OAuth App for the initial authenticated user flow. The app currently requests only the public identity needed to identify the signed-in developer.
-
-GitHub OAuth App local configuration:
-
-- Homepage URL: http://localhost:3000
-- Redirect URI: http://localhost:3001/auth/github/callback
-- Wildcard matching: disabled
 
 Required environment variables:
 
@@ -103,19 +109,6 @@ Required environment variables:
 - `WEB_URL`
 - `AUTH_SESSION_SECRET`
 - `GITHUB_TOKEN_ENCRYPTION_KEY`
-
-Generate strong values with Node crypto:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Notes:
-
-- GitHub access tokens are encrypted at rest using AES-256-GCM before persistence.
-- ProjectPulse sessions use an HttpOnly cookie for the signed session.
-- No repository permissions are requested yet; the OAuth app intentionally uses the default public-access profile only.
 
 ### Repository access
 

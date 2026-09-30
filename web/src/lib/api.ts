@@ -55,6 +55,7 @@ export type DashboardActivity = {
 };
 
 export type DashboardResponse = {
+  generatedAt: string;
   metrics: DashboardMetrics;
   repositories: DashboardRepositorySummary[];
   recentActivity: DashboardActivity[];

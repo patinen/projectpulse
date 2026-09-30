@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { GitHubService, type GitHubRepositorySummary } from '../github/github.service.js';
+import { DashboardSyncQueueService } from '../queue/dashboard-sync-queue.service.js';
 
 export type RepositoryListItem = GitHubRepositorySummary & {
   tracked: boolean;
@@ -8,9 +9,12 @@ export type RepositoryListItem = GitHubRepositorySummary & {
 
 @Injectable()
 export class RepositoryService {
+  private readonly logger = new Logger(RepositoryService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly githubService: GitHubService,
+    private readonly dashboardSyncQueueService?: DashboardSyncQueueService,
   ) {}
 
   async getRepositoriesForUser(userId: string): Promise<RepositoryListItem[]> {
@@ -85,6 +89,8 @@ export class RepositoryService {
       },
     });
 
+    await this.enqueueDashboardRefresh(userId);
+
     return {
       ...githubRepository,
       tracked: true,
@@ -107,5 +113,19 @@ export class RepositoryService {
         repositoryId: repository.id,
       },
     });
+
+    await this.enqueueDashboardRefresh(userId);
+  }
+
+  private async enqueueDashboardRefresh(userId: string): Promise<void> {
+    if (!this.dashboardSyncQueueService) {
+      return;
+    }
+
+    try {
+      await this.dashboardSyncQueueService.enqueueUserSync(userId);
+    } catch (error) {
+      this.logger.warn(`Queued dashboard refresh failed for user ${userId}: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
   }
 }

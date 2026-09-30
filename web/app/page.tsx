@@ -14,6 +14,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUnauthenticated, setIsUnauthenticated] = useState(false);
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     void (async () => {
@@ -64,6 +65,39 @@ export default function HomePage() {
     ];
   }, [dashboard]);
 
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const interval = window.setInterval(tick, 60000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const updatedLabel = useMemo(() => {
+    if (!dashboard?.generatedAt || now === 0) {
+      return 'Updated just now';
+    }
+
+    const date = new Date(dashboard.generatedAt);
+    const diffMs = now - date.getTime();
+    const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+
+    if (diffMinutes < 1) {
+      return 'Updated just now';
+    }
+
+    if (diffMinutes < 60) {
+      return `Updated ${diffMinutes}m ago`;
+    }
+
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours < 24) {
+      return `Updated ${diffHours}h ago`;
+    }
+
+    const diffDays = Math.round(diffHours / 24);
+    return `Updated ${diffDays}d ago`;
+  }, [dashboard, now]);
+
   return (
     <AppShell>
       <div className="space-y-8">
@@ -77,6 +111,7 @@ export default function HomePage() {
           <p className="max-w-2xl text-sm text-slate-400 sm:text-base">
             Repository activity, pull requests, and engineering health for tracked GitHub repositories.
           </p>
+          <p className="text-xs text-slate-400">{updatedLabel}</p>
         </header>
 
         {isLoading ? (

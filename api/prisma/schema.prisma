@@ -17,6 +17,7 @@ model User {
   updatedAt            DateTime             @updatedAt
   trackedRepositories  TrackedRepository[]
   githubConnection      GitHubConnection?
+  dashboardSnapshots    DashboardSnapshot[]
 
   @@map("users")
 }
@@ -36,16 +37,17 @@ model GitHubConnection {
 }
 
 model Repository {
-  id               String            @id @default(uuid()) @db.Uuid
-  githubId         String            @unique
-  owner            String
-  name             String
-  fullName         String            @unique
-  private          Boolean
-  defaultBranch    String
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  trackedBy        TrackedRepository[]
+  id                     String                    @id @default(uuid()) @db.Uuid
+  githubId               String                    @unique
+  owner                  String
+  name                   String
+  fullName               String                    @unique
+  private                Boolean
+  defaultBranch          String
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  trackedBy              TrackedRepository[]
+  metricSnapshots        RepositoryMetricSnapshot[]
 
   @@map("repositories")
 }
@@ -60,4 +62,41 @@ model TrackedRepository {
 
   @@unique([userId, repositoryId])
   @@map("tracked_repositories")
+}
+
+model DashboardSnapshot {
+  id                    String                    @id @default(uuid()) @db.Uuid
+  userId                String                    @db.Uuid
+  openIssues            Int
+  openPullRequests      Int
+  commits7d             Int
+  activeContributors30d Int
+  recentActivity        Json
+  capturedAt            DateTime                  @default(now())
+
+  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositories          RepositoryMetricSnapshot[]
+
+  @@index([userId, capturedAt])
+  @@map("dashboard_snapshots")
+}
+
+model RepositoryMetricSnapshot {
+  id                   String            @id @default(uuid()) @db.Uuid
+  dashboardSnapshotId  String            @db.Uuid
+  repositoryId        String            @db.Uuid
+
+  fullName            String
+  language            String?
+  openIssues          Int
+  openPullRequests    Int
+  commits7d           Int
+  lastActivityAt      DateTime?
+
+  dashboardSnapshot   DashboardSnapshot @relation(fields: [dashboardSnapshotId], references: [id], onDelete: Cascade)
+  repository          Repository        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardSnapshotId])
+  @@index([repositoryId])
+  @@map("repository_metric_snapshots")
 }
