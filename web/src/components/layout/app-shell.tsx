@@ -48,8 +48,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="border-b border-neutral-800/90">
           <div className="flex h-20 items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 text-sm font-semibold text-neutral-100">
-                P
+              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 text-neutral-100">
+                <svg
+                  viewBox="0 0 32 32"
+                  className="h-4 w-4"
+                  aria-label="ProjectPulse"
+                  role="img"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M3 16H8L11 10L14 22L18 9L20.5 16H29"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
               <span className="text-lg font-semibold tracking-tight text-neutral-50">
                 ProjectPulse
