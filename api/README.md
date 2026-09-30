@@ -72,6 +72,8 @@ ProjectPulse serves activity from PostgreSQL snapshot history only. The endpoint
 
 ProjectPulse supports a simple Coolify/Nixpacks deployment model with three runtime targets.
 
+The API and worker require Node 22.22.3 or newer within the Node 22 line. Nixpacks is pinned via `api/nixpacks.toml` because the previous default archive resolved Node 22.11.0, which is incompatible with the current NestJS and Angular Devkit dependency tree.
+
 #### Coolify runtime settings
 
 ##### WEB
