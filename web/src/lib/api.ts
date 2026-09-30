@@ -61,6 +61,38 @@ export type DashboardResponse = {
   recentActivity: DashboardActivity[];
 };
 
+export type RepositoryAnalyticsRange = '7d' | '30d' | '90d';
+
+export type RepositoryAnalyticsPoint = {
+  capturedAt: string;
+  openIssues: number;
+  openPullRequests: number;
+  commits7d: number;
+};
+
+export type RepositoryAnalyticsCurrent = {
+  openIssues: number;
+  openPullRequests: number;
+  commits7d: number;
+  lastActivityAt: string | null;
+  capturedAt: string;
+};
+
+export type RepositoryAnalyticsResponse = {
+  repository: {
+    githubId: string;
+    fullName: string;
+    language: string | null;
+  };
+  range: {
+    value: RepositoryAnalyticsRange;
+    from: string;
+    to: string;
+  };
+  current: RepositoryAnalyticsCurrent | null;
+  history: RepositoryAnalyticsPoint[];
+};
+
 const defaultApiUrl = 'http://localhost:3001';
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || defaultApiUrl;
 
@@ -196,4 +228,32 @@ export async function getDashboard(): Promise<DashboardResponse> {
   }
 
   return (await response.json()) as DashboardResponse;
+}
+
+export async function getRepositoryAnalytics(
+  githubId: string,
+  range: RepositoryAnalyticsRange = '30d',
+): Promise<RepositoryAnalyticsResponse> {
+  const response = await fetch(`${apiBaseUrl}/repositories/${githubId}/analytics?range=${range}`, {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error('Your session is no longer valid');
+  }
+
+  if (response.status === 404) {
+    throw new Error('Repository is not tracked for this user');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Could not load repository analytics: ${response.status}`);
+  }
+
+  return (await response.json()) as RepositoryAnalyticsResponse;
 }

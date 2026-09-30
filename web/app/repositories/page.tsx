@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/src/components/layout/app-shell';
 import { getRepositories, trackRepository, untrackRepository, type Repository } from '@/src/lib/api';
@@ -87,14 +88,12 @@ export default function RepositoriesPage() {
                         {repository.owner}
                       </span>
                       <span className="text-slate-500">/</span>
-                      <a
-                        href={repository.htmlUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                      <Link
+                        href={`/repositories/${repository.githubId}`}
                         className="text-lg font-semibold text-slate-100 hover:text-sky-300"
                       >
                         {repository.name}
-                      </a>
+                      </Link>
                     </div>
 
                     {repository.description ? (

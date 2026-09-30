@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { DashboardRepositorySummary } from '@/src/lib/api';
 
 function formatRelativeTime(value: string | null): string {
@@ -51,17 +52,25 @@ export function RepositoryList({ repositories }: { repositories: DashboardReposi
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
+                <Link
+                  href={`/repositories/${repository.githubId}`}
+                  className="block truncate text-base font-medium text-slate-100 hover:text-sky-300"
+                >
+                  {repository.fullName}
+                </Link>
+                <p className="mt-1 text-xs text-slate-500">{repository.language ?? 'Unknown language'}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">{formatRelativeTime(repository.lastActivityAt)}</span>
                 <a
                   href={`https://github.com/${repository.fullName}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="block truncate text-base font-medium text-slate-100 hover:text-sky-300"
+                  className="text-xs text-sky-400 hover:text-sky-300"
                 >
-                  {repository.fullName}
+                  GitHub
                 </a>
-                <p className="mt-1 text-xs text-slate-500">{repository.language ?? 'Unknown language'}</p>
               </div>
-              <span className="text-xs text-slate-500">{formatRelativeTime(repository.lastActivityAt)}</span>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">

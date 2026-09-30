@@ -4,12 +4,13 @@ import { DatabaseModule } from '../database/database.module.js';
 import { GitHubModule } from '../github/github.module.js';
 import { QueueModule } from '../queue/queue.module.js';
 import { RepositoriesController } from './repositories.controller.js';
+import { RepositoryAnalyticsService } from './repository-analytics.service.js';
 import { RepositoryService } from './repositories.service.js';
 
 @Module({
   imports: [DatabaseModule, AuthModule, GitHubModule, QueueModule],
   controllers: [RepositoriesController],
-  providers: [RepositoryService],
-  exports: [RepositoryService],
+  providers: [RepositoryService, RepositoryAnalyticsService],
+  exports: [RepositoryService, RepositoryAnalyticsService],
 })
 export class RepositoriesModule {}

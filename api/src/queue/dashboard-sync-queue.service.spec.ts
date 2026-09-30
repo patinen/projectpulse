@@ -69,13 +69,13 @@ describe('DashboardSyncQueueService', () => {
     );
   });
 
-  it('closes the queue exactly once during module destruction', async () => {
+  it('closes the queue once during module destruction', async () => {
     const configService = { get: vi.fn().mockReturnValue('redis://localhost:6379') } as unknown as ConfigService;
     const service = new DashboardSyncQueueService(configService);
 
     await service.onModuleDestroy();
     await service.onModuleDestroy();
 
-    expect(closeMock).toHaveBeenCalledTimes(2);
+    expect(closeMock).toHaveBeenCalledTimes(1);
   });
 });
