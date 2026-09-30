@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { GitHubService, type GitHubRepositorySummary } from '../github/github.service.js';
-import type { TrackRepositoryDto } from './dto/track-repository.dto.js';
 
 export type RepositoryListItem = GitHubRepositorySummary & {
   tracked: boolean;
@@ -41,27 +40,34 @@ export class RepositoryService {
     }));
   }
 
-  async trackRepository(userId: string, dto: TrackRepositoryDto): Promise<RepositoryListItem> {
-    if (dto.private) {
+  async trackRepository(userId: string, githubId: string): Promise<RepositoryListItem> {
+    const githubRepositories = await this.githubService.listPublicRepositoriesForUser(userId);
+    const githubRepository = githubRepositories.find((repository) => repository.githubId === githubId);
+
+    if (!githubRepository) {
+      throw new BadRequestException('Repository was not found in the authenticated user’s public GitHub repositories');
+    }
+
+    if (githubRepository.private) {
       throw new BadRequestException('Private repositories are not supported yet.');
     }
 
     const repository = await this.prisma.repository.upsert({
-      where: { githubId: dto.githubId },
+      where: { githubId },
       update: {
-        owner: dto.owner,
-        name: dto.name,
-        fullName: dto.fullName,
-        private: false,
-        defaultBranch: dto.defaultBranch,
+        owner: githubRepository.owner,
+        name: githubRepository.name,
+        fullName: githubRepository.fullName,
+        private: githubRepository.private,
+        defaultBranch: githubRepository.defaultBranch,
       },
       create: {
-        githubId: dto.githubId,
-        owner: dto.owner,
-        name: dto.name,
-        fullName: dto.fullName,
-        private: false,
-        defaultBranch: dto.defaultBranch,
+        githubId,
+        owner: githubRepository.owner,
+        name: githubRepository.name,
+        fullName: githubRepository.fullName,
+        private: githubRepository.private,
+        defaultBranch: githubRepository.defaultBranch,
       },
     });
 
@@ -80,18 +86,7 @@ export class RepositoryService {
     });
 
     return {
-      githubId: repository.githubId,
-      owner: repository.owner,
-      name: repository.name,
-      fullName: repository.fullName,
-      private: repository.private,
-      defaultBranch: repository.defaultBranch,
-      htmlUrl: `https://github.com/${repository.fullName}`,
-      description: null,
-      language: null,
-      stars: 0,
-      forks: 0,
-      updatedAt: new Date().toISOString(),
+      ...githubRepository,
       tracked: true,
     };
   }

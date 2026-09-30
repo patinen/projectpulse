@@ -111,14 +111,7 @@ export async function trackRepository(repository: Repository): Promise<Repositor
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
-    body: JSON.stringify({
-      githubId: repository.githubId,
-      owner: repository.owner,
-      name: repository.name,
-      fullName: repository.fullName,
-      private: repository.private,
-      defaultBranch: repository.defaultBranch,
-    }),
+    body: JSON.stringify({ githubId: repository.githubId }),
   });
 
   if (response.status === 401) {

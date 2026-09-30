@@ -2,17 +2,19 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@/src/components/ui/button';
 import { getCurrentUser, logout, type AuthUser } from '@/src/lib/api';
 
 const navigationItems = [
-  { label: 'Dashboard', href: '/', active: true },
-  { label: 'Repositories', href: '/repositories', active: false },
-  { label: 'Activity', href: '#', active: false },
+  { label: 'Dashboard', href: '/' },
+  { label: 'Repositories', href: '/repositories' },
+  { label: 'Activity', href: '#' },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,8 +57,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
 
             <nav className="hidden items-center gap-2 md:flex" aria-label="Main navigation">
-              {navigationItems.map((item) => (
-                item.href === '#' ? (
+              {navigationItems.map((item) => {
+                const isActive = item.href === '/' ? pathname === '/' : item.href !== '#' && pathname.startsWith(item.href);
+
+                return item.href === '#' ? (
                   <span
                     key={item.label}
                     className="cursor-default rounded-md px-3 py-2 text-sm text-slate-500"
@@ -68,15 +72,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                     key={item.label}
                     href={item.href}
                     className={`rounded-md px-3 py-2 text-sm ${
-                      item.active
+                      isActive
                         ? 'bg-slate-900 text-slate-50 ring-1 ring-inset ring-slate-700'
                         : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100'
                     }`}
                   >
                     {item.label}
                   </Link>
-                )
-              ))}
+                );
+              })}
             </nav>
 
             {isLoading ? (

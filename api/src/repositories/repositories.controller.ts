@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -34,13 +35,11 @@ export class RepositoriesController {
     @Param('githubId') githubId: string,
     @Body() body: TrackRepositoryDto,
   ) {
-    const payload = Object.assign({}, body, { githubId });
-
-    if (body.githubId !== githubId) {
-      return this.repositoryService.trackRepository(request.user.id, payload);
+    if (body?.githubId && body.githubId !== githubId) {
+      throw new BadRequestException('Repository identity does not match the route');
     }
 
-    return this.repositoryService.trackRepository(request.user.id, body);
+    return this.repositoryService.trackRepository(request.user.id, githubId);
   }
 
   @Delete(':githubId/track')

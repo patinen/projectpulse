@@ -1,11 +1,11 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { AuthService } from '../auth/auth.service.js';
 import { GitHubService } from '../github/github.service.js';
 import { RepositoriesController } from './repositories.controller.js';
 import { RepositoryService } from './repositories.service.js';
-import type { TrackRepositoryDto } from './dto/track-repository.dto.js';
 
 describe('GitHubService', () => {
   let authService: Pick<AuthService, 'getGitHubAccessTokenForUser'>;
@@ -169,15 +169,23 @@ describe('RepositoryService', () => {
     ]);
   });
 
-  it('tracking upserts Repository and creates TrackedRepository', async () => {
-    const dto: TrackRepositoryDto = {
-      githubId: '777',
-      owner: 'octo',
-      name: 'tracked',
-      fullName: 'octo/tracked',
-      private: false,
-      defaultBranch: 'main',
-    };
+  it('tracking a valid GitHub repository uses the authoritative GitHub metadata', async () => {
+    githubService.listPublicRepositoriesForUser.mockResolvedValue([
+      {
+        githubId: '777',
+        owner: 'octo',
+        name: 'tracked',
+        fullName: 'octo/tracked',
+        private: false,
+        defaultBranch: 'main',
+        htmlUrl: 'https://github.com/octo/tracked',
+        description: 'authoritative description',
+        language: 'TypeScript',
+        stars: 12,
+        forks: 3,
+        updatedAt: '2026-09-30T00:00:00Z',
+      },
+    ]);
 
     prisma.repository.upsert.mockResolvedValue({
       id: 'repo-1',
@@ -189,7 +197,7 @@ describe('RepositoryService', () => {
       defaultBranch: 'main',
     });
 
-    const result = await service.trackRepository('user-1', dto);
+    const result = await service.trackRepository('user-1', '777');
 
     expect(prisma.repository.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -207,18 +215,33 @@ describe('RepositoryService', () => {
         },
       }),
     );
-    expect(result.tracked).toBe(true);
-  });
-
-  it('duplicate tracking is idempotent', async () => {
-    const dto: TrackRepositoryDto = {
+    expect(result).toMatchObject({
       githubId: '777',
       owner: 'octo',
       name: 'tracked',
       fullName: 'octo/tracked',
-      private: false,
-      defaultBranch: 'main',
-    };
+      tracked: true,
+      description: 'authoritative description',
+    });
+  });
+
+  it('duplicate tracking is idempotent', async () => {
+    githubService.listPublicRepositoriesForUser.mockResolvedValue([
+      {
+        githubId: '777',
+        owner: 'octo',
+        name: 'tracked',
+        fullName: 'octo/tracked',
+        private: false,
+        defaultBranch: 'main',
+        htmlUrl: 'https://github.com/octo/tracked',
+        description: 'authoritative description',
+        language: 'TypeScript',
+        stars: 12,
+        forks: 3,
+        updatedAt: '2026-09-30T00:00:00Z',
+      },
+    ]);
 
     prisma.repository.upsert.mockResolvedValue({
       id: 'repo-1',
@@ -230,21 +253,35 @@ describe('RepositoryService', () => {
       defaultBranch: 'main',
     });
 
-    await expect(service.trackRepository('user-1', dto)).resolves.toBeDefined();
+    await expect(service.trackRepository('user-1', '777')).resolves.toBeDefined();
     expect(prisma.trackedRepository.upsert).toHaveBeenCalled();
   });
 
-  it('private repository tracking is rejected', async () => {
-    const dto = {
-      githubId: '777',
-      owner: 'octo',
-      name: 'private',
-      fullName: 'octo/private',
-      private: true,
-      defaultBranch: 'main',
-    };
+  it('rejects an unknown githubId', async () => {
+    githubService.listPublicRepositoriesForUser.mockResolvedValue([]);
 
-    await expect(service.trackRepository('user-1', dto as TrackRepositoryDto)).rejects.toThrow(BadRequestException);
+    await expect(service.trackRepository('user-1', 'missing-id')).rejects.toThrow(BadRequestException);
+  });
+
+  it('private repository tracking is rejected', async () => {
+    githubService.listPublicRepositoriesForUser.mockResolvedValue([
+      {
+        githubId: '777',
+        owner: 'octo',
+        name: 'private',
+        fullName: 'octo/private',
+        private: true,
+        defaultBranch: 'main',
+        htmlUrl: 'https://github.com/octo/private',
+        description: null,
+        language: null,
+        stars: 0,
+        forks: 0,
+        updatedAt: '2026-09-30T00:00:00Z',
+      },
+    ]);
+
+    await expect(service.trackRepository('user-1', '777')).rejects.toThrow(BadRequestException);
   });
 
   it('untracking deletes only the user relation and is idempotent when missing', async () => {
@@ -261,15 +298,9 @@ describe('RepositoryService', () => {
 });
 
 describe('RepositoriesController', () => {
-  it('repository endpoints are protected by AuthGuard', () => {
-    const prototype = RepositoriesController.prototype as {
-      listRepositories: unknown;
-      trackRepository: unknown;
-      untrackRepository: unknown;
-    };
+  it('controller-level AuthGuard metadata is present', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, RepositoriesController);
 
-    expect(Reflect.getMetadata('guards', prototype.listRepositories)).toContain(AuthGuard);
-    expect(Reflect.getMetadata('guards', prototype.trackRepository)).toContain(AuthGuard);
-    expect(Reflect.getMetadata('guards', prototype.untrackRepository)).toContain(AuthGuard);
+    expect(guards).toContain(AuthGuard);
   });
 });
