@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 
 @Injectable()
-export class DashboardSyncQueueService {
+export class DashboardSyncQueueService implements OnModuleDestroy {
   private readonly logger = new Logger(DashboardSyncQueueService.name);
   private readonly queue: Queue;
 
@@ -18,29 +18,31 @@ export class DashboardSyncQueueService {
           delay: 30000,
         },
         removeOnComplete: { count: 20 },
-        removeOnFail: { count: 20 },
+        removeOnFail: { count: 50 },
       },
     });
   }
 
+  async onModuleDestroy(): Promise<void> {
+    await this.queue.close();
+  }
+
   async enqueueUserSync(userId: string): Promise<void> {
-    try {
-      await this.queue.add(
-        'dashboard-sync',
-        { userId },
-        {
-          jobId: `dashboard-sync-${userId}`,
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 30000,
-          },
-          removeOnComplete: { count: 20 },
-          removeOnFail: { count: 20 },
+    await this.queue.add(
+      'dashboard-sync',
+      { userId },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 30000,
         },
-      );
-    } catch (error) {
-      this.logger.warn(`Dashboard sync queue failed for user ${userId}: ${error instanceof Error ? error.message : 'unknown error'}`);
-    }
+        removeOnComplete: { count: 20 },
+        removeOnFail: { count: 50 },
+        deduplication: {
+          id: `dashboard-sync-${userId}`,
+        },
+      },
+    );
   }
 }

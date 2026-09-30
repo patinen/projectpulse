@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service.js';
 import { DashboardSyncQueueService } from './dashboard-sync-queue.service.js';
 
 @Injectable()
 export class DashboardSyncScheduler {
+  private readonly logger = new Logger(DashboardSyncScheduler.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly dashboardSyncQueueService: DashboardSyncQueueService,
@@ -17,7 +19,13 @@ export class DashboardSyncScheduler {
     });
 
     for (const user of userIds) {
-      await this.dashboardSyncQueueService.enqueueUserSync(user.userId);
+      try {
+        await this.dashboardSyncQueueService.enqueueUserSync(user.userId);
+      } catch (error) {
+        this.logger.warn(
+          `Skipping dashboard sync enqueue for user ${user.userId}: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      }
     }
   }
 }

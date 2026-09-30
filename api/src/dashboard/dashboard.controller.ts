@@ -1,4 +1,13 @@
-import { Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  ServiceUnavailableException,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthGuard } from '../auth/auth.guard.js';
 import type { AuthenticatedUser } from '../auth/auth.service.js';
@@ -21,7 +30,11 @@ export class DashboardController {
   @Post('refresh')
   @HttpCode(HttpStatus.ACCEPTED)
   async refreshDashboard(@Req() request: Request & { user: AuthenticatedUser }) {
-    await this.dashboardSyncQueueService.enqueueUserSync(request.user.id);
-    return { status: 'queued' };
+    try {
+      await this.dashboardSyncQueueService.enqueueUserSync(request.user.id);
+      return { status: 'queued' };
+    } catch {
+      throw new ServiceUnavailableException('Dashboard refresh could not be queued right now.');
+    }
   }
 }

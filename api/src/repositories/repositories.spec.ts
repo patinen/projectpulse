@@ -432,6 +432,82 @@ describe('RepositoryService', () => {
     await expect(service.untrackRepository('user-2', 'missing')).resolves.toBeUndefined();
     expect(prisma.trackedRepository.deleteMany).toHaveBeenCalledTimes(1);
   });
+
+  it('successful track calls enqueueUserSync for the user', async () => {
+    const queueService = { enqueueUserSync: vi.fn().mockResolvedValue(undefined) };
+    const serviceWithQueue = new RepositoryService(prisma, githubService, queueService as any);
+
+    githubService.listPublicRepositoriesForUser.mockResolvedValue([
+      {
+        githubId: '777',
+        owner: 'octo',
+        name: 'tracked',
+        fullName: 'octo/tracked',
+        private: false,
+        defaultBranch: 'main',
+        htmlUrl: 'https://github.com/octo/tracked',
+        description: 'authoritative description',
+        language: 'TypeScript',
+        stars: 12,
+        forks: 3,
+        updatedAt: '2026-09-30T00:00:00Z',
+      },
+    ]);
+
+    prisma.repository.upsert.mockResolvedValue({ id: 'repo-1', githubId: '777' });
+
+    await expect(serviceWithQueue.trackRepository('user-1', '777')).resolves.toMatchObject({ tracked: true });
+    expect(queueService.enqueueUserSync).toHaveBeenCalledWith('user-1');
+  });
+
+  it('successful untrack calls enqueueUserSync for the user', async () => {
+    const queueService = { enqueueUserSync: vi.fn().mockResolvedValue(undefined) };
+    const serviceWithQueue = new RepositoryService(prisma, githubService, queueService as any);
+
+    prisma.repository.findUnique.mockResolvedValue({ id: 'repo-1' });
+
+    await expect(serviceWithQueue.untrackRepository('user-1', '777')).resolves.toBeUndefined();
+    expect(queueService.enqueueUserSync).toHaveBeenCalledWith('user-1');
+  });
+
+  it('queue enqueue failure does not reject an otherwise successful track', async () => {
+    const queueService = { enqueueUserSync: vi.fn().mockRejectedValue(new Error('redis down')) };
+    const serviceWithQueue = new RepositoryService(prisma, githubService, queueService as any);
+
+    githubService.listPublicRepositoriesForUser.mockResolvedValue([
+      {
+        githubId: '777',
+        owner: 'octo',
+        name: 'tracked',
+        fullName: 'octo/tracked',
+        private: false,
+        defaultBranch: 'main',
+        htmlUrl: 'https://github.com/octo/tracked',
+        description: 'authoritative description',
+        language: 'TypeScript',
+        stars: 12,
+        forks: 3,
+        updatedAt: '2026-09-30T00:00:00Z',
+      },
+    ]);
+
+    prisma.repository.upsert.mockResolvedValue({ id: 'repo-1', githubId: '777' });
+
+    await expect(serviceWithQueue.trackRepository('user-1', '777')).resolves.toMatchObject({ tracked: true });
+    expect(queueService.enqueueUserSync).toHaveBeenCalledWith('user-1');
+  });
+
+  it('queue enqueue failure does not restore an untracked relation', async () => {
+    const queueService = { enqueueUserSync: vi.fn().mockRejectedValue(new Error('redis down')) };
+    const serviceWithQueue = new RepositoryService(prisma, githubService, queueService as any);
+
+    prisma.repository.findUnique.mockResolvedValue({ id: 'repo-1' });
+
+    await expect(serviceWithQueue.untrackRepository('user-1', '777')).resolves.toBeUndefined();
+    expect(prisma.trackedRepository.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', repositoryId: 'repo-1' },
+    });
+  });
 });
 
 describe('RepositoriesController', () => {

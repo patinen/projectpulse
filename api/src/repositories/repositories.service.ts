@@ -125,7 +125,9 @@ export class RepositoryService {
     try {
       await this.dashboardSyncQueueService.enqueueUserSync(userId);
     } catch (error) {
-      this.logger.warn(`Queued dashboard refresh failed for user ${userId}: ${error instanceof Error ? error.message : 'unknown error'}`);
+      this.logger.warn(
+        `Dashboard refresh queue failed for user ${userId}: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
     }
   }
 }

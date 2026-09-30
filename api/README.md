@@ -101,6 +101,12 @@ The frontend app lives in `../web`.
 
 ProjectPulse uses a GitHub OAuth App for the initial authenticated user flow. The app currently requests only the public identity needed to identify the signed-in developer.
 
+Useful local values:
+
+- Homepage: `http://localhost:3000`
+- Redirect: `http://localhost:3001/auth/github/callback`
+- Wildcard matching: disabled
+
 Required environment variables:
 
 - `GITHUB_CLIENT_ID`
@@ -109,6 +115,20 @@ Required environment variables:
 - `WEB_URL`
 - `AUTH_SESSION_SECRET`
 - `GITHUB_TOKEN_ENCRYPTION_KEY`
+
+Generate the session and encryption secrets locally with Node:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Set them as:
+
+```bash
+AUTH_SESSION_SECRET=<generated-secret>
+GITHUB_TOKEN_ENCRYPTION_KEY=<generated-secret>
+```
 
 ### Repository access
 
