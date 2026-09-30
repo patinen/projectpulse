@@ -14,6 +14,18 @@ Default URL: http://localhost:3001
 ## Endpoints
 
 - `GET /health`
+- `GET /dashboard`
+
+The dashboard aggregates live GitHub metrics from the authenticated user's tracked public repositories.
+
+Metric definitions:
+
+- Open issues: real GitHub issues only; pull requests are excluded from this count.
+- Open pull requests: currently open pull requests across tracked repositories.
+- Commits (7d): commits in tracked repositories during the last 7 days.
+- Active contributors: distinct GitHub commit authors active in tracked repositories during the last 30 days.
+
+Analytics are calculated live from the GitHub API for the current tracked set and are not yet historical snapshots.
 
 ## Environment
 

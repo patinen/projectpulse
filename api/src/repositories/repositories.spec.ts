@@ -3,6 +3,8 @@ import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { AuthService } from '../auth/auth.service.js';
+import { DashboardController } from '../dashboard/dashboard.controller.js';
+import { DashboardService } from '../dashboard/dashboard.service.js';
 import { GitHubService } from '../github/github.service.js';
 import { RepositoriesController } from './repositories.controller.js';
 import { RepositoryService } from './repositories.service.js';
@@ -126,6 +128,143 @@ describe('GitHubService', () => {
 
     expect(repositories).toHaveLength(120);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('issues response excludes pull requests from issue count', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          { id: 1, number: 1, title: 'Real issue', html_url: 'https://example.com/issue/1', created_at: '2026-09-01T00:00:00Z', user: { login: 'alice' } },
+          { id: 2, number: 2, title: 'PR item', html_url: 'https://example.com/pull/2', created_at: '2026-09-02T00:00:00Z', user: { login: 'bob' }, pull_request: {} },
+        ],
+      }),
+    );
+
+    const issues = await service.listRepositoryIssues('user-1', 'octo', 'projectpulse');
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ number: 1, title: 'Real issue' });
+  });
+
+  it('issue pagination works', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => Array.from({ length: 100 }, (_, index) => ({
+          id: index + 1,
+          number: index + 1,
+          title: `Issue ${index + 1}`,
+          html_url: `https://example.com/issue/${index + 1}`,
+          created_at: '2026-09-01T00:00:00Z',
+          user: { login: 'alice' },
+        })),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => [{
+          id: 101,
+          number: 101,
+          title: 'Final issue',
+          html_url: 'https://example.com/issue/101',
+          created_at: '2026-09-02T00:00:00Z',
+          user: { login: 'alice' },
+        }],
+      });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const issues = await service.listRepositoryIssues('user-1', 'octo', 'projectpulse');
+
+    expect(issues).toHaveLength(101);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('commits respect the supplied since date', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [{
+          sha: 'abc123',
+          html_url: 'https://example.com/commit/abc123',
+          commit: { message: 'Test commit', author: { date: '2026-09-20T00:00:00Z' } },
+          author: { login: 'alice' },
+        }],
+      }),
+    );
+
+    const since = new Date('2026-09-15T00:00:00Z');
+    await service.listRepositoryCommits('user-1', 'octo', 'projectpulse', since);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('since=2026-09-15T00%3A00%3A00.000Z'),
+      expect.any(Object),
+    );
+  });
+
+  it('commit mapping works when author is null', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [{
+          sha: 'abc123',
+          html_url: 'https://example.com/commit/abc123',
+          commit: { message: 'First line\nSecond line', author: { date: '2026-09-20T00:00:00Z' } },
+          author: null,
+        }],
+      }),
+    );
+
+    const commits = await service.listRepositoryCommits('user-1', 'octo', 'projectpulse', new Date('2026-09-01T00:00:00Z'));
+
+    expect(commits).toEqual([
+      {
+        sha: 'abc123',
+        htmlUrl: 'https://example.com/commit/abc123',
+        message: 'First line\nSecond line',
+        occurredAt: '2026-09-20T00:00:00Z',
+        authorLogin: null,
+      },
+    ]);
+  });
+
+  it('pull request mapping only treats merged PRs as merged activity', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [
+          { id: 1, title: 'Merged', html_url: 'https://example.com/m', merged_at: '2026-09-03T00:00:00Z', user: { login: 'alice' } },
+          { id: 2, title: 'Open', html_url: 'https://example.com/o', merged_at: null, user: { login: 'bob' } },
+        ],
+      }),
+    );
+
+    const mergedPulls = await service.listRecentMergedPullRequests('user-1', 'octo', 'projectpulse');
+
+    expect(mergedPulls).toHaveLength(1);
+    expect(mergedPulls[0]).toMatchObject({ title: 'Merged', userLogin: 'alice' });
+  });
+
+  it('GitHub non-2xx errors behave correctly', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+      }),
+    );
+
+    await expect(service.listOpenPullRequests('user-1', 'octo', 'projectpulse')).rejects.toThrow(ForbiddenException);
   });
 });
 
@@ -300,6 +439,169 @@ describe('RepositoryService', () => {
 describe('RepositoriesController', () => {
   it('controller-level AuthGuard metadata is present', () => {
     const guards = Reflect.getMetadata(GUARDS_METADATA, RepositoriesController);
+
+    expect(guards).toContain(AuthGuard);
+  });
+});
+
+describe('DashboardService', () => {
+  it('returns zero metrics and empty arrays when no repositories are tracked', async () => {
+    const prisma: any = {
+      trackedRepository: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    };
+
+    const githubService: any = {};
+    const service = new DashboardService(prisma, githubService);
+
+    await expect(service.getDashboard('user-1')).resolves.toEqual({
+      metrics: {
+        openIssues: 0,
+        openPullRequests: 0,
+        commits7d: 0,
+        activeContributors30d: 0,
+      },
+      repositories: [],
+      recentActivity: [],
+    });
+  });
+
+  it('aggregates metrics and recent activity across tracked repositories', async () => {
+    const prisma: any = {
+      trackedRepository: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            repository: {
+              githubId: '1',
+              owner: 'octo',
+              name: 'alpha',
+              fullName: 'octo/alpha',
+              defaultBranch: 'main',
+            },
+          },
+          {
+            repository: {
+              githubId: '2',
+              owner: 'octo',
+              name: 'beta',
+              fullName: 'octo/beta',
+              defaultBranch: 'main',
+            },
+          },
+        ]),
+      },
+    };
+
+    const githubService: any = {
+      listRepositoryIssues: vi.fn()
+        .mockResolvedValueOnce([
+          { id: 11, number: 1, title: 'Issue one', htmlUrl: 'https://example.com/1', createdAt: '2026-09-15T00:00:00Z', userLogin: 'alice' },
+          { id: 12, number: 2, title: 'Issue two', htmlUrl: 'https://example.com/2', createdAt: '2026-09-20T00:00:00Z', userLogin: 'bob' },
+        ])
+        .mockResolvedValueOnce([
+          { id: 21, number: 3, title: 'Issue three', htmlUrl: 'https://example.com/3', createdAt: '2026-09-10T00:00:00Z', userLogin: 'carol' },
+        ]),
+      listOpenPullRequests: vi.fn()
+        .mockResolvedValueOnce([
+          { id: 101, number: 1, title: 'PR one', htmlUrl: 'https://example.com/pr/1', createdAt: '2026-09-14T00:00:00Z', userLogin: 'alice', state: 'open', mergedAt: null },
+          { id: 102, number: 2, title: 'PR two', htmlUrl: 'https://example.com/pr/2', createdAt: '2026-09-16T00:00:00Z', userLogin: 'bob', state: 'open', mergedAt: null },
+        ])
+        .mockResolvedValueOnce([
+          { id: 201, number: 4, title: 'PR three', htmlUrl: 'https://example.com/pr/3', createdAt: '2026-09-18T00:00:00Z', userLogin: 'dana', state: 'open', mergedAt: null },
+        ]),
+      listRepositoryCommits: vi.fn()
+        .mockResolvedValueOnce([
+          { sha: 'aaa', htmlUrl: 'https://example.com/commit/aaa', message: 'First commit', occurredAt: '2026-09-29T10:00:00Z', authorLogin: 'alice' },
+          { sha: 'bbb', htmlUrl: 'https://example.com/commit/bbb', message: 'Second commit', occurredAt: '2026-09-26T10:00:00Z', authorLogin: null },
+          { sha: 'ccc', htmlUrl: 'https://example.com/commit/ccc', message: 'Old commit', occurredAt: '2026-08-28T10:00:00Z', authorLogin: 'dana' },
+        ])
+        .mockResolvedValueOnce([
+          { sha: 'ddd', htmlUrl: 'https://example.com/commit/ddd', message: 'Other commit', occurredAt: '2026-09-27T10:00:00Z', authorLogin: 'alice' },
+        ]),
+      listRecentMergedPullRequests: vi.fn()
+        .mockResolvedValueOnce([
+          { id: 1001, title: 'Merged A', htmlUrl: 'https://example.com/pr/merge-a', mergedAt: '2026-09-28T00:00:00Z', userLogin: 'alice' },
+        ])
+        .mockResolvedValueOnce([]),
+      getRepositoryMetadata: vi.fn()
+        .mockResolvedValueOnce({ language: 'TypeScript' })
+        .mockResolvedValueOnce({ language: 'Go' }),
+    };
+
+    const service = new DashboardService(prisma, githubService);
+    const dashboard = await service.getDashboard('user-1');
+
+    expect(dashboard.metrics).toEqual({
+      openIssues: 3,
+      openPullRequests: 3,
+      commits7d: 3,
+      activeContributors30d: 2,
+    });
+    expect(dashboard.recentActivity.length).toBeLessThanOrEqual(10);
+    expect(dashboard.recentActivity[0]?.kind).toBe('commit pushed');
+    expect(dashboard.repositories[0]).toMatchObject({
+      githubId: '1',
+      fullName: 'octo/alpha',
+      language: 'TypeScript',
+      openIssues: 2,
+      openPullRequests: 2,
+      commits7d: 2,
+    });
+  });
+
+  it('skips deleted repositories without failing the whole dashboard', async () => {
+    const prisma: any = {
+      trackedRepository: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            repository: {
+              githubId: '1',
+              owner: 'octo',
+              name: 'alpha',
+              fullName: 'octo/alpha',
+              defaultBranch: 'main',
+            },
+          },
+          {
+            repository: {
+              githubId: '2',
+              owner: 'octo',
+              name: 'beta',
+              fullName: 'octo/beta',
+              defaultBranch: 'main',
+            },
+          },
+        ]),
+      },
+    };
+
+    const githubService: any = {
+      listRepositoryIssues: vi.fn()
+        .mockRejectedValueOnce(new Error('not found'))
+        .mockResolvedValueOnce([]),
+      listOpenPullRequests: vi.fn().mockResolvedValue([]),
+      listRepositoryCommits: vi.fn().mockResolvedValue([]),
+      listRecentMergedPullRequests: vi.fn().mockResolvedValue([]),
+      getRepositoryMetadata: vi.fn().mockResolvedValue({ language: 'TypeScript' }),
+    };
+
+    const service = new DashboardService(prisma, githubService);
+    const dashboard = await service.getDashboard('user-1');
+
+    expect(dashboard.metrics).toEqual({
+      openIssues: 0,
+      openPullRequests: 0,
+      commits7d: 0,
+      activeContributors30d: 0,
+    });
+    expect(dashboard.repositories).toHaveLength(1);
+  });
+});
+
+describe('DashboardController', () => {
+  it('controller-level AuthGuard metadata is present', () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, DashboardController);
 
     expect(guards).toContain(AuthGuard);
   });

@@ -1,10 +1,69 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityList } from '@/src/components/dashboard/activity-list';
 import { MetricCard } from '@/src/components/dashboard/metric-card';
 import { RepositoryList } from '@/src/components/dashboard/repository-list';
 import { AppShell } from '@/src/components/layout/app-shell';
-import { dashboardMetrics } from '@/src/data/dashboard';
+import { getDashboard, type DashboardResponse } from '@/src/lib/api';
+import type { DashboardMetric } from '@/src/data/dashboard';
 
 export default function HomePage() {
+  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setError(null);
+        setIsUnauthenticated(false);
+        const response = await getDashboard();
+        setDashboard(response);
+      } catch (loadError) {
+        const message = loadError instanceof Error ? loadError.message : 'Unable to load dashboard';
+        if (/session|valid/i.test(message)) {
+          setIsUnauthenticated(true);
+        } else {
+          setError(message);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, []);
+
+  const metrics = useMemo<DashboardMetric[]>(() => {
+    if (!dashboard) {
+      return [];
+    }
+
+    return [
+      {
+        label: 'Open issues',
+        value: String(dashboard.metrics.openIssues),
+        detail: `Across ${dashboard.repositories.length} tracked repos`,
+      },
+      {
+        label: 'Open pull requests',
+        value: String(dashboard.metrics.openPullRequests),
+        detail: `Across ${dashboard.repositories.length} tracked repos`,
+      },
+      {
+        label: 'Commits (7d)',
+        value: String(dashboard.metrics.commits7d),
+        detail: 'Last 7 days',
+      },
+      {
+        label: 'Active contributors',
+        value: String(dashboard.metrics.activeContributors30d),
+        detail: 'Last 30 days',
+      },
+    ];
+  }, [dashboard]);
+
   return (
     <AppShell>
       <div className="space-y-8">
@@ -16,20 +75,46 @@ export default function HomePage() {
             Engineering overview
           </h1>
           <p className="max-w-2xl text-sm text-slate-400 sm:text-base">
-            Repository activity, pull requests and development metrics in one place.
+            Repository activity, pull requests, and engineering health for tracked GitHub repositories.
           </p>
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {dashboardMetrics.map((metric) => (
-            <MetricCard key={metric.label} {...metric} />
-          ))}
-        </section>
+        {isLoading ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-300">
+            Loading dashboard...
+          </div>
+        ) : isUnauthenticated ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-200">
+            GitHub must be connected to view the engineering dashboard.
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-200">
+            {error}
+          </div>
+        ) : dashboard && dashboard.repositories.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-8 text-center text-slate-300">
+            <p className="text-lg font-medium text-slate-100">No repositories are being tracked yet.</p>
+            <Link
+              href="/repositories"
+              className="mt-4 inline-flex items-center justify-center rounded-md border border-sky-400 bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400"
+            >
+              Go to repositories
+            </Link>
+          </div>
+        ) : dashboard ? (
+          <>
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {metrics.map((metric) => (
+                <MetricCard key={metric.label} {...metric} />
+              ))}
+            </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
-          <ActivityList />
-          <RepositoryList />
-        </div>
+            <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+              <ActivityList events={dashboard.recentActivity} />
+              <RepositoryList repositories={dashboard.repositories} />
+            </div>
+          </>
+        ) : null}
       </div>
     </AppShell>
   );
