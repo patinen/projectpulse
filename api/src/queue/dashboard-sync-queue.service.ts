@@ -6,7 +6,6 @@ import { Queue } from 'bullmq';
 export class DashboardSyncQueueService implements OnModuleDestroy {
   private readonly logger = new Logger(DashboardSyncQueueService.name);
   private readonly queue: Queue;
-  private isClosing = false;
 
   constructor(private readonly configService: ConfigService) {
     const redisUrl = this.configService.get<string>('REDIS_URL', 'redis://localhost:6379');
@@ -25,11 +24,6 @@ export class DashboardSyncQueueService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.isClosing) {
-      return;
-    }
-
-    this.isClosing = true;
     await this.queue.close();
   }
 

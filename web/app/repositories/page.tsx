@@ -88,12 +88,16 @@ export default function RepositoriesPage() {
                         {repository.owner}
                       </span>
                       <span className="text-slate-500">/</span>
-                      <Link
-                        href={`/repositories/${repository.githubId}`}
-                        className="text-lg font-semibold text-slate-100 hover:text-sky-300"
-                      >
-                        {repository.name}
-                      </Link>
+                      {repository.tracked ? (
+                        <Link
+                          href={`/repositories/${repository.githubId}`}
+                          className="text-lg font-semibold text-slate-100 hover:text-sky-300"
+                        >
+                          {repository.name}
+                        </Link>
+                      ) : (
+                        <span className="text-lg font-semibold text-slate-100">{repository.name}</span>
+                      )}
                     </div>
 
                     {repository.description ? (
@@ -110,22 +114,42 @@ export default function RepositoriesPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => void handleToggle(repository)}
-                    disabled={pendingId === repository.githubId}
-                    className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${
-                      repository.tracked
-                        ? 'border border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500'
-                        : 'border border-sky-500 bg-sky-500 text-slate-950 hover:bg-sky-400'
-                    } ${pendingId === repository.githubId ? 'cursor-not-allowed opacity-60' : ''}`}
-                  >
-                    {pendingId === repository.githubId
-                      ? 'Updating...'
-                      : repository.tracked
-                        ? 'Untrack'
-                        : 'Track'}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {repository.tracked ? (
+                      <Link
+                        href={`/repositories/${repository.githubId}`}
+                        className="inline-flex items-center justify-center rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-300 hover:border-sky-400 hover:text-sky-200"
+                      >
+                        View analytics
+                      </Link>
+                    ) : null}
+
+                    <a
+                      href={repository.htmlUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
+                    >
+                      GitHub
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleToggle(repository)}
+                      disabled={pendingId === repository.githubId}
+                      className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${
+                        repository.tracked
+                          ? 'border border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500'
+                          : 'border border-sky-500 bg-sky-500 text-slate-950 hover:bg-sky-400'
+                      } ${pendingId === repository.githubId ? 'cursor-not-allowed opacity-60' : ''}`}
+                    >
+                      {pendingId === repository.githubId
+                        ? 'Updating...'
+                        : repository.tracked
+                          ? 'Untrack'
+                          : 'Track'}
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}

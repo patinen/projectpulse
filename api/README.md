@@ -52,8 +52,21 @@ Default API URL: http://localhost:3001
 - `GET /dashboard`
 - `POST /dashboard/refresh`
 - `GET /repositories`
+- `GET /repositories/:githubId/analytics?range=30d`
 - `POST /repositories/:githubId/track`
 - `DELETE /repositories/:githubId/track`
+
+### Repository analytics
+
+ProjectPulse serves repository analytics from PostgreSQL snapshot history only. The endpoint requires the authenticated user to already be tracking the repository.
+
+- Supported ranges: `7d`, `30d`, `90d`
+- `GET /repositories/:githubId/analytics?range=30d`
+- Requires the authenticated user to track the repository
+- Reads only persisted snapshot data; no live GitHub API requests are made while viewing analytics
+- History is built from the final snapshot recorded for each UTC day
+- Current values use the newest stored snapshot for the repository
+- Historical data begins accumulating only after ProjectPulse starts capturing snapshot records
 
 ## Environment
 

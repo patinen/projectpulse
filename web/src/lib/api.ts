@@ -234,7 +234,9 @@ export async function getRepositoryAnalytics(
   githubId: string,
   range: RepositoryAnalyticsRange = '30d',
 ): Promise<RepositoryAnalyticsResponse> {
-  const response = await fetch(`${apiBaseUrl}/repositories/${githubId}/analytics?range=${range}`, {
+  const params = new URLSearchParams({ range });
+  const encodedGithubId = encodeURIComponent(githubId);
+  const response = await fetch(`${apiBaseUrl}/repositories/${encodedGithubId}/analytics?${params.toString()}`, {
     method: 'GET',
     credentials: 'include',
     cache: 'no-store',

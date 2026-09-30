@@ -57,7 +57,6 @@ export class RepositoryAnalyticsService {
           select: {
             githubId: true,
             fullName: true,
-            language: true,
           },
         },
       },
@@ -141,7 +140,7 @@ export class RepositoryAnalyticsService {
       repository: {
         githubId: repository.githubId,
         fullName: repository.fullName,
-        language: repository.language,
+        language: latestSnapshot?.language ?? null,
       },
       range: {
         value: range,

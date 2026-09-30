@@ -2,14 +2,10 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { MetricTrendCard } from '@/src/components/analytics/metric-trend-card';
 import { AppShell } from '@/src/components/layout/app-shell';
-import {
-  getRepositoryAnalytics,
-  type RepositoryAnalyticsPoint,
-  type RepositoryAnalyticsRange,
-  type RepositoryAnalyticsResponse,
-} from '@/src/lib/api';
+import { getRepositoryAnalytics, type RepositoryAnalyticsRange, type RepositoryAnalyticsResponse } from '@/src/lib/api';
 
 const rangeOptions: RepositoryAnalyticsRange[] = ['7d', '30d', '90d'];
 
@@ -22,13 +18,6 @@ function formatDate(value: string | null): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  });
-}
-
-function formatShortDate(value: string): string {
-  return new Date(value).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
   });
 }
 
@@ -61,14 +50,6 @@ export default function RepositoryDetailPage() {
     void loadAnalytics();
   }, [githubId, range]);
 
-  const maxCommits = useMemo(() => {
-    if (!analytics || analytics.history.length === 0) {
-      return 1;
-    }
-
-    return Math.max(...analytics.history.map((point) => point.commits7d), 1);
-  }, [analytics]);
-
   const historyPoints = analytics?.history ?? [];
 
   return (
@@ -93,7 +74,16 @@ export default function RepositoryDetailPage() {
               </p>
             </div>
 
-            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
+            <div className="flex items-center gap-2">
+              <a
+                href={analytics ? `https://github.com/${analytics.repository.fullName}` : '#'}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
+              >
+                GitHub
+              </a>
+              <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
               {rangeOptions.map((option) => (
                 <button
                   key={option}
@@ -104,10 +94,11 @@ export default function RepositoryDetailPage() {
                       ? 'bg-sky-500 text-slate-950'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
                   }`}
-                >
-                  {option}
-                </button>
-              ))}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </header>
@@ -122,56 +113,65 @@ export default function RepositoryDetailPage() {
           </div>
         ) : analytics ? (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open issues</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.current?.openIssues ?? 0}</p>
-                <p className="mt-2 text-xs text-slate-400">Last snapshot: {formatDate(analytics.current?.capturedAt ?? null)}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open PRs</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.current?.openPullRequests ?? 0}</p>
-                <p className="mt-2 text-xs text-slate-400">Last snapshot: {formatDate(analytics.current?.capturedAt ?? null)}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Commits (7d)</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.current?.commits7d ?? 0}</p>
-                <p className="mt-2 text-xs text-slate-400">Last activity: {formatDate(analytics.current?.lastActivityAt ?? null)}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Range</p>
-                <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.range.value}</p>
-                <p className="mt-2 text-xs text-slate-400">
-                  {formatShortDate(analytics.range.from)} → {formatShortDate(analytics.range.to)}
+            {analytics.current ? (
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open issues</p>
+                  <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.current.openIssues}</p>
+                  <p className="mt-2 text-xs text-slate-400">Last snapshot: {formatDate(analytics.current.capturedAt)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Open pull requests</p>
+                  <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.current.openPullRequests}</p>
+                  <p className="mt-2 text-xs text-slate-400">Last snapshot: {formatDate(analytics.current.capturedAt)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Commits (7d)</p>
+                  <p className="mt-3 text-3xl font-semibold text-slate-50">{analytics.current.commits7d}</p>
+                  <p className="mt-2 text-xs text-slate-400">Last activity: {formatDate(analytics.current.lastActivityAt)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Last activity</p>
+                  <p className="mt-3 text-xl font-semibold text-slate-50">{formatDate(analytics.current.lastActivityAt)}</p>
+                  <p className="mt-2 text-xs text-slate-400">Latest stored update</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Last snapshot</p>
+                  <p className="mt-3 text-xl font-semibold text-slate-50">{formatDate(analytics.current.capturedAt)}</p>
+                  <p className="mt-2 text-xs text-slate-400">Range: {analytics.range.value}</p>
+                </div>
+              </section>
+            ) : (
+              <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+                <h2 className="text-xl font-semibold text-slate-50">Waiting for the first snapshot.</h2>
+                <p className="mt-3 text-sm text-slate-400">
+                  Metrics will appear after the background sync completes.
                 </p>
-              </div>
-            </section>
+              </section>
+            )}
 
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-slate-50">Commits trend</h2>
-                <span className="text-xs text-slate-500">{historyPoints.length} daily snapshots</span>
-              </div>
-
-              {historyPoints.length === 0 ? (
-                <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-400">
-                  No historical snapshots are available for this repository yet.
-                </div>
-              ) : (
-                <div className="flex h-40 items-end gap-2 overflow-x-auto pb-2">
-                  {historyPoints.map((point: RepositoryAnalyticsPoint) => {
-                    const ratio = Math.max(0.15, point.commits7d / maxCommits);
-                    return (
-                      <div key={`${point.capturedAt}-${point.commits7d}`} className="flex min-w-[40px] flex-1 flex-col items-center gap-2">
-                        <span className="text-[10px] text-slate-500">{point.commits7d}</span>
-                        <div className="w-full rounded-t-md bg-sky-500/80" style={{ height: `${Math.max(16, ratio * 100)}%` }} />
-                        <span className="text-[10px] text-slate-500">{formatShortDate(point.capturedAt)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
+            {analytics.current ? (
+              <section className="grid gap-4 xl:grid-cols-3">
+                <MetricTrendCard
+                  title="Open issues"
+                  currentValue={analytics.current.openIssues}
+                  history={historyPoints}
+                  valueSelector={(point) => point.openIssues}
+                />
+                <MetricTrendCard
+                  title="Open pull requests"
+                  currentValue={analytics.current.openPullRequests}
+                  history={historyPoints}
+                  valueSelector={(point) => point.openPullRequests}
+                />
+                <MetricTrendCard
+                  title="Commits (7d)"
+                  currentValue={analytics.current.commits7d}
+                  history={historyPoints}
+                  valueSelector={(point) => point.commits7d}
+                />
+              </section>
+            ) : null}
           </>
         ) : null}
       </div>

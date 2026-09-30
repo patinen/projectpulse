@@ -74,7 +74,6 @@ describe('DashboardSyncQueueService', () => {
     const service = new DashboardSyncQueueService(configService);
 
     await service.onModuleDestroy();
-    await service.onModuleDestroy();
 
     expect(closeMock).toHaveBeenCalledTimes(1);
   });
