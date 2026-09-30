@@ -249,6 +249,25 @@ export class AuthService {
     };
   }
 
+  async getGitHubAccessTokenForUser(userId: string): Promise<string> {
+    const connection = await this.prisma.gitHubConnection.findUnique({
+      where: { userId },
+      select: {
+        accessTokenEncrypted: true,
+      },
+    });
+
+    if (!connection?.accessTokenEncrypted) {
+      throw new UnauthorizedException('GitHub account is not connected');
+    }
+
+    try {
+      return this.tokenEncryptionService.decrypt(connection.accessTokenEncrypted);
+    } catch {
+      throw new UnauthorizedException('GitHub access token could not be decrypted');
+    }
+  }
+
   async validateSessionToken(token: string): Promise<string> {
     const secret = this.configService.get<string>('AUTH_SESSION_SECRET');
 

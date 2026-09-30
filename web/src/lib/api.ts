@@ -11,6 +11,22 @@ export type AuthUser = {
   avatarUrl: string | null;
 };
 
+export type Repository = {
+  githubId: string;
+  owner: string;
+  name: string;
+  fullName: string;
+  private: boolean;
+  defaultBranch: string;
+  htmlUrl: string;
+  description: string | null;
+  language: string | null;
+  stars: number;
+  forks: number;
+  updatedAt: string;
+  tracked: boolean;
+};
+
 const defaultApiUrl = 'http://localhost:3001';
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || defaultApiUrl;
 
@@ -62,5 +78,74 @@ export async function logout(): Promise<void> {
 
   if (!response.ok && response.status !== 204) {
     throw new Error(`Logout failed with status ${response.status}`);
+  }
+}
+
+export async function getRepositories(): Promise<Repository[]> {
+  const response = await fetch(`${apiBaseUrl}/repositories`, {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error('Your session is no longer valid');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Could not load repositories: ${response.status}`);
+  }
+
+  const payload = (await response.json()) as { repositories: Repository[] };
+  return payload.repositories ?? [];
+}
+
+export async function trackRepository(repository: Repository): Promise<Repository> {
+  const response = await fetch(`${apiBaseUrl}/repositories/${repository.githubId}/track`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      githubId: repository.githubId,
+      owner: repository.owner,
+      name: repository.name,
+      fullName: repository.fullName,
+      private: repository.private,
+      defaultBranch: repository.defaultBranch,
+    }),
+  });
+
+  if (response.status === 401) {
+    throw new Error('Your session is no longer valid');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Could not track repository: ${response.status}`);
+  }
+
+  return (await response.json()) as Repository;
+}
+
+export async function untrackRepository(githubId: string): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/repositories/${githubId}/track`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error('Your session is no longer valid');
+  }
+
+  if (!response.ok && response.status !== 204) {
+    throw new Error(`Could not untrack repository: ${response.status}`);
   }
 }

@@ -4,6 +4,8 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DatabaseModule } from './database/database.module.js';
+import { GitHubModule } from './github/github.module.js';
+import { RepositoriesModule } from './repositories/repositories.module.js';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { DatabaseModule } from './database/database.module.js';
     }),
     DatabaseModule,
     AuthModule,
+    GitHubModule,
+    RepositoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

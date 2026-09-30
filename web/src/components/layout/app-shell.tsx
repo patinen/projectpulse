@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@/src/components/ui/button';
 import { getCurrentUser, logout, type AuthUser } from '@/src/lib/api';
 
 const navigationItems = [
-  { label: 'Dashboard', active: true },
-  { label: 'Repositories', active: false },
-  { label: 'Activity', active: false },
+  { label: 'Dashboard', href: '/', active: true },
+  { label: 'Repositories', href: '/repositories', active: false },
+  { label: 'Activity', href: '#', active: false },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,9 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const handleLogin = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/auth/github`;
-  };
+  const githubLoginUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/auth/github`;
 
   const handleLogout = async () => {
     try {
@@ -56,17 +56,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <nav className="hidden items-center gap-2 md:flex" aria-label="Main navigation">
               {navigationItems.map((item) => (
-                <a
-                  key={item.label}
-                  href="#"
-                  className={`rounded-md px-3 py-2 text-sm ${
-                    item.active
-                      ? 'bg-slate-900 text-slate-50 ring-1 ring-inset ring-slate-700'
-                      : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100'
-                  }`}
-                >
-                  {item.label}
-                </a>
+                item.href === '#' ? (
+                  <span
+                    key={item.label}
+                    className="cursor-default rounded-md px-3 py-2 text-sm text-slate-500"
+                  >
+                    {item.label}
+                  </span>
+                ) : (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`rounded-md px-3 py-2 text-sm ${
+                      item.active
+                        ? 'bg-slate-900 text-slate-50 ring-1 ring-inset ring-slate-700'
+                        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )
               ))}
             </nav>
 
@@ -76,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5">
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.login} className="h-7 w-7 rounded-full" />
+                    <Image src={user.avatarUrl} alt={user.login} width={28} height={28} className="rounded-full" />
                   ) : (
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-300">
                       {user.login.slice(0, 1).toUpperCase()}
@@ -92,9 +101,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Button>
               </div>
             ) : (
-              <Button variant="primary" onClick={handleLogin}>
+              <a
+                href={githubLoginUrl}
+                className="inline-flex items-center justify-center rounded-md border border-sky-400 bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm hover:bg-sky-400"
+              >
                 Connect GitHub
-              </Button>
+              </a>
             )}
           </div>
         </header>

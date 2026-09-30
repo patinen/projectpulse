@@ -104,3 +104,13 @@ Notes:
 - GitHub access tokens are encrypted at rest using AES-256-GCM before persistence.
 - ProjectPulse sessions use an HttpOnly cookie for the signed session.
 - No repository permissions are requested yet; the OAuth app intentionally uses the default public-access profile only.
+
+### Repository access
+
+ProjectPulse currently supports public GitHub repositories only.
+
+- `GET /repositories`: lists the authenticated user's public GitHub repositories and whether each is tracked in ProjectPulse.
+- `POST /repositories/:githubId/track`: tracks a selected public repository for the authenticated user.
+- `DELETE /repositories/:githubId/track`: removes the authenticated user's tracking relation without deleting the underlying repository record.
+
+Private repository access will require an explicit future permission upgrade and is intentionally not requested yet.
