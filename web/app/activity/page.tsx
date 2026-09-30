@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/src/components/layout/app-shell';
 import { getActivity, type ActivityEvent, type ActivityKindFilter, type ActivityRange, type ActivityResponse } from '@/src/lib/api';
@@ -9,7 +10,7 @@ const kindOptions: Array<{ value: ActivityKindFilter; label: string }> = [
   { value: 'all', label: 'All activity' },
   { value: 'commit', label: 'Commits' },
   { value: 'issue', label: 'Issues' },
-  { value: 'pr', label: 'Pull requests' },
+  { value: 'pr', label: 'Merged PRs' },
 ];
 
 function formatDate(value: string): string {
@@ -71,6 +72,7 @@ export default function ActivityPage() {
           <p className="max-w-2xl text-sm text-slate-400">
             A historical feed built from persisted dashboard snapshots — never from live GitHub reads.
           </p>
+          <p className="text-xs text-slate-500">Snapshot-derived history may not contain every GitHub event.</p>
         </header>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5">
@@ -157,53 +159,70 @@ export default function ActivityPage() {
               )}
             </div>
 
-            {events.length === 0 ? (
+            {activity?.meta.latestSnapshotAt === null ? (
               <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center text-slate-300">
-                No activity matches the current filters.
+                No activity snapshots are available for this period yet.
+              </div>
+            ) : events.length === 0 ? (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center text-slate-300">
+                No activity matches the selected filters.
               </div>
             ) : (
               <div className="space-y-3">
-                {events.map((event) => (
-                  <article
-                    key={event.id}
-                    className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 transition hover:border-slate-700"
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-300">
-                            {describeKind(event.kind)}
-                          </span>
-                          <span className="text-xs uppercase tracking-[0.18em] text-slate-500">{event.repository}</span>
+                {events.map((event) => {
+                  const repositoryMetadata = repositories.find((repo) => repo.fullName === event.repository);
+
+                  return (
+                    <article
+                      key={event.id}
+                      className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 transition hover:border-slate-700"
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-300">
+                              {describeKind(event.kind)}
+                            </span>
+                            {repositoryMetadata && repositoryMetadata.tracked && repositoryMetadata.githubId ? (
+                              <Link
+                                href={`/repositories/${repositoryMetadata.githubId}`}
+                                className="text-xs uppercase tracking-[0.18em] text-sky-300 hover:text-sky-200"
+                              >
+                                {event.repository}
+                              </Link>
+                            ) : (
+                              <span className="text-xs uppercase tracking-[0.18em] text-slate-500">{event.repository}</span>
+                            )}
+                          </div>
+
+                          <a
+                            href={event.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 block text-lg font-medium text-slate-50 hover:text-sky-300"
+                          >
+                            {event.title}
+                          </a>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                            <span>{event.actor ?? 'Unknown actor'}</span>
+                            <span>•</span>
+                            <span>{formatDate(event.occurredAt)}</span>
+                          </div>
                         </div>
 
                         <a
                           href={event.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-3 block text-lg font-medium text-slate-50 hover:text-sky-300"
+                          className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500 hover:text-white"
                         >
-                          {event.title}
+                          Open
                         </a>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-                          <span>{event.actor ?? 'Unknown actor'}</span>
-                          <span>•</span>
-                          <span>{formatDate(event.occurredAt)}</span>
-                        </div>
                       </div>
-
-                      <a
-                        href={event.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500 hover:text-white"
-                      >
-                        Open
-                      </a>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </>

@@ -1,18 +1,65 @@
 # ProjectPulse
 
-ProjectPulse is a developer and project analytics dashboard for GitHub repositories. It brings together repository activity, pull requests, issues, contributors, and development metrics into a single workspace for engineering teams.
+ProjectPulse is a GitHub repository and engineering analytics dashboard for tracked public repositories. It combines repository health, activity history, contributor signals, and PostgreSQL-backed snapshots into a durable developer overview.
 
-## Current architecture
+## Current features
 
-Next.js frontend
-        |
-        v
-NestJS API
-        |
-        v
-GitHub API + PostgreSQL (planned)
+- GitHub OAuth sign-in
+- public repository tracking
+- live GitHub synchronization
+- PostgreSQL snapshot persistence
+- historical repository analytics
+- SVG metric trends
+- snapshot-derived activity feed
+- Redis / BullMQ background synchronization
+- 15-minute scheduler refreshes
+- retry/backoff and queue deduplication
+- separate API and worker runtime architecture
 
-GitHub integration and PostgreSQL are planned for future work and are not implemented yet.
+## Current stack
+
+Frontend:
+- Next.js
+- TypeScript
+- React
+- Tailwind CSS
+
+Backend:
+- NestJS
+- TypeScript
+- Prisma
+- PostgreSQL
+
+Background processing:
+- Redis
+- BullMQ
+
+External:
+- GitHub REST API
+- GitHub OAuth
+
+## Architecture
+
+```text
+Browser
+   |
+   v
+Next.js
+   |
+   v
+NestJS API --------> PostgreSQL
+   |
+   v
+Redis / BullMQ
+   |
+   v
+Worker
+   |
+   v
+GitHub API
+```
+
+The worker writes fresh snapshot data, while normal dashboard and history reads are served primarily from PostgreSQL-backed snapshots.
 
 ## Local development
 
@@ -36,11 +83,26 @@ npm run start:dev
 
 The API runs on http://localhost:3001 by default.
 
+### Worker
+
+```bash
+cd api
+npm install
+npm run start:worker:dev
+```
+
+## Intended production deployment URLs
+
+- Frontend: https://pulse.pat1.online
+- API health: https://api.pulse.pat1.online/health
+
+These are intended deployment URLs until the production environment is actually verified.
+
 ## Repository layout
 
 ```text
 projectpulse/
-├── api/        # NestJS API
+├── api/        # NestJS API + worker runtime
 ├── web/        # Next.js frontend
 ├── README.md
 └── .gitignore

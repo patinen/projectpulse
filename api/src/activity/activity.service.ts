@@ -30,7 +30,8 @@ export class ActivityService {
     const kind = this.normalizeKind(query.kind ?? 'all');
     const repositoryFilter = typeof query.repository === 'string' && query.repository.trim() ? query.repository.trim() : null;
 
-    const rangeCutoff = new Date(Date.now() - RANGE_DAYS[range] * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const rangeCutoff = new Date(now.getTime() - RANGE_DAYS[range] * 24 * 60 * 60 * 1000);
     const snapshots = await this.prisma.dashboardSnapshot.findMany({
       where: {
         userId,
@@ -48,8 +49,12 @@ export class ActivityService {
     });
 
     const deduplicated = this.reconstructEvents(snapshots);
-    const byKind = kind === 'all' ? deduplicated : deduplicated.filter((event) => this.kindMatches(kind, event.kind));
-    const repositoryNames = Array.from(new Set(byKind.map((event) => event.repository))).sort((left, right) => left.localeCompare(right));
+    const inRange = deduplicated.filter((event) => {
+      const occurredAt = new Date(event.occurredAt).getTime();
+      return occurredAt >= rangeCutoff.getTime() && occurredAt <= now.getTime();
+    });
+
+    const repositoryNames = Array.from(new Set(inRange.map((event) => event.repository))).sort((left, right) => left.localeCompare(right));
     const trackedMap = await this.loadTrackedRepositoryMap(userId);
 
     const repositories: ActivityRepositoryFilter[] = repositoryNames.map((fullName) => {
@@ -61,6 +66,7 @@ export class ActivityService {
       };
     });
 
+    const byKind = kind === 'all' ? inRange : inRange.filter((event) => this.kindMatches(kind, event.kind));
     const filteredByRepository = repositoryFilter
       ? byKind.filter((event) => event.repository === repositoryFilter)
       : byKind;
@@ -73,7 +79,7 @@ export class ActivityService {
       range: {
         value: range,
         from: rangeCutoff.toISOString(),
-        to: new Date().toISOString(),
+        to: now.toISOString(),
       },
       filters: {
         kind,
@@ -155,7 +161,15 @@ export class ActivityService {
     const occurredAt = typeof entry.occurredAt === 'string' ? entry.occurredAt.trim() : '';
     const url = typeof entry.url === 'string' ? entry.url.trim() : '';
     const kind = typeof entry.kind === 'string' ? entry.kind : '';
-    const actor = typeof entry.actor === 'string' ? entry.actor.trim() || null : entry.actor === null ? null : null;
+    let actor: string | null;
+
+    if (entry.actor === null) {
+      actor = null;
+    } else if (typeof entry.actor === 'string') {
+      actor = entry.actor.trim() || null;
+    } else {
+      return null;
+    }
 
     if (!id || !repository || !title || !occurredAt || !url || !VALID_EVENT_KINDS.has(kind as ActivityEventKind)) {
       return null;

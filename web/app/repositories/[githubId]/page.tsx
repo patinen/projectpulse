@@ -75,14 +75,16 @@ export default function RepositoryDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <a
-                href={analytics ? `https://github.com/${analytics.repository.fullName}` : '#'}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
-              >
-                GitHub
-              </a>
+              {analytics?.repository.fullName ? (
+                <a
+                  href={`https://github.com/${analytics.repository.fullName}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
+                >
+                  GitHub
+                </a>
+              ) : null}
               <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
               {rangeOptions.map((option) => (
                 <button

@@ -68,6 +68,18 @@ ProjectPulse serves activity from PostgreSQL snapshot history only. The endpoint
 - Contains no live GitHub API calls while browsing the activity page
 - Repository filter options are built from the filtered event set and include tracked status metadata when available
 
+### Production deployment
+
+ProjectPulse supports a simple Coolify/Nixpacks deployment model with three runtime targets:
+
+- API runtime: `npm ci`, `npm run db:generate`, `npm run build`, then `npm run start:prod:migrate`
+- Worker runtime: `npm ci`, `npm run db:generate`, `npm run build`, then `npm run start:worker`
+- PostgreSQL and Redis: private Coolify-managed services used by both API and worker
+- Health check: `GET /health` on the API host for Coolify monitoring
+- Production OAuth callback: `https://api.pulse.pat1.online/auth/github/callback`
+
+The API applies committed Prisma migrations before serving traffic. The worker does not run migrations; it only starts the queue worker process.
+
 ### Repository analytics
 
 ProjectPulse serves repository analytics from PostgreSQL snapshot history only. The endpoint requires the authenticated user to already be tracking the repository.

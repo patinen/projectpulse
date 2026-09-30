@@ -202,6 +202,30 @@ describe('ActivityService', () => {
     expect(result.events[0].actor).toBeNull();
   });
 
+  it('rejects malformed actor values instead of silently coercing them to null', async () => {
+    const prisma: any = {
+      dashboardSnapshot: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            capturedAt: new Date('2026-09-30T12:00:00.000Z'),
+            recentActivity: [
+              { id: 'commit:a:bad', kind: 'commit pushed', repository: 'acme/app', title: 'bad actor', actor: { login: 'alice' }, occurredAt: '2026-09-30T11:00:00.000Z', url: 'https://github.com/acme/app/commit/bad' },
+              { id: 'commit:a:good', kind: 'commit pushed', repository: 'acme/app', title: 'good actor', actor: 'alice', occurredAt: '2026-09-30T10:00:00.000Z', url: 'https://github.com/acme/app/commit/good' },
+            ],
+          },
+        ]),
+      },
+      trackedRepository: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    };
+
+    const service = new ActivityService(prisma);
+    const result = await service.getActivity('user-1', { range: '30d' });
+
+    expect(result.events.map((event) => event.id)).toEqual(['commit:a:good']);
+  });
+
   it('filters by commit, issue, or pr event type', async () => {
     const prisma: any = {
       dashboardSnapshot: {
@@ -229,6 +253,61 @@ describe('ActivityService', () => {
     expect(commitResult.events.map((event) => event.kind)).toEqual(['commit pushed']);
     expect(issueResult.events.map((event) => event.kind)).toEqual(['issue opened']);
     expect(prResult.events.map((event) => event.kind)).toEqual(['pull request merged']);
+  });
+
+  it('keeps repository filter options stable across kind switches and applies the selected time range to occurredAt', async () => {
+    vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+    const prisma: any = {
+      dashboardSnapshot: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            capturedAt: new Date('2026-09-30T11:00:00.000Z'),
+            recentActivity: [
+              { id: 'commit:1', kind: 'commit pushed', repository: 'acme/app', title: 'commit', actor: 'alice', occurredAt: '2026-09-30T09:00:00.000Z', url: 'https://github.com/acme/app/commit/1' },
+              { id: 'issue:1', kind: 'issue opened', repository: 'alpha/service', title: 'issue', actor: 'bob', occurredAt: '2026-09-27T08:00:00.000Z', url: 'https://github.com/alpha/service/issues/1' },
+              { id: 'pr:1', kind: 'pull request merged', repository: 'zeta/ops', title: 'pr', actor: 'charlie', occurredAt: '2026-09-25T07:00:00.000Z', url: 'https://github.com/zeta/ops/pull/1' },
+            ],
+          },
+        ]),
+      },
+      trackedRepository: {
+        findMany: vi.fn().mockResolvedValue([{ repository: { githubId: '111', fullName: 'acme/app' } }]),
+      },
+    };
+
+    const service = new ActivityService(prisma);
+    const allResult = await service.getActivity('user-1', { range: '30d', kind: 'all' });
+    const commitResult = await service.getActivity('user-1', { range: '30d', kind: 'commit' });
+
+    expect(allResult.repositories.map((repo) => repo.fullName)).toEqual(['acme/app', 'alpha/service', 'zeta/ops']);
+    expect(commitResult.repositories.map((repo) => repo.fullName)).toEqual(['acme/app', 'alpha/service', 'zeta/ops']);
+    expect(allResult.events.map((event) => event.id)).toEqual(['commit:1', 'issue:1', 'pr:1']);
+    expect(commitResult.events.map((event) => event.id)).toEqual(['commit:1']);
+  });
+
+  it('omits events that fall outside the selected occurredAt window even if stored in a recent snapshot', async () => {
+    vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+    const prisma: any = {
+      dashboardSnapshot: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            capturedAt: new Date('2026-09-30T11:00:00.000Z'),
+            recentActivity: [
+              { id: 'old-issue', kind: 'issue opened', repository: 'acme/app', title: 'old issue', actor: 'alice', occurredAt: '2026-09-18T09:00:00.000Z', url: 'https://github.com/acme/app/issues/99' },
+              { id: 'new-issue', kind: 'issue opened', repository: 'acme/app', title: 'new issue', actor: 'alice', occurredAt: '2026-09-29T09:00:00.000Z', url: 'https://github.com/acme/app/issues/100' },
+            ],
+          },
+        ]),
+      },
+      trackedRepository: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    };
+
+    const service = new ActivityService(prisma);
+    const result = await service.getActivity('user-1', { range: '7d' });
+
+    expect(result.events.map((event) => event.id)).toEqual(['new-issue']);
   });
 
   it('filters by exact repository fullName', async () => {
