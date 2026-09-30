@@ -33,6 +33,18 @@ DATABASE_URL=postgresql://projectpulse:projectpulse@localhost:5432/projectpulse?
 
 ## Local PostgreSQL
 
+Local development:
+
+```bash
+npm run db:migrate
+```
+
+Production or staging deployment:
+
+```bash
+npm run db:deploy
+```
+
 1. Start PostgreSQL from the API folder:
 
 ```bash
@@ -41,7 +53,7 @@ docker compose up -d
 
 2. Create `api/.env` from `.env.example`.
 
-3. Run the Prisma migration:
+3. Run the local Prisma migration:
 
 ```bash
 npm run db:migrate
