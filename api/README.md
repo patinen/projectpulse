@@ -70,13 +70,51 @@ ProjectPulse serves activity from PostgreSQL snapshot history only. The endpoint
 
 ### Production deployment
 
-ProjectPulse supports a simple Coolify/Nixpacks deployment model with three runtime targets:
+ProjectPulse supports a simple Coolify/Nixpacks deployment model with three runtime targets.
 
-- API runtime: `npm ci`, `npm run db:generate`, `npm run build`, then `npm run start:prod:migrate`
-- Worker runtime: `npm ci`, `npm run db:generate`, `npm run build`, then `npm run start:worker`
-- PostgreSQL and Redis: private Coolify-managed services used by both API and worker
-- Health check: `GET /health` on the API host for Coolify monitoring
-- Production OAuth callback: `https://api.pulse.pat1.online/auth/github/callback`
+#### Coolify runtime settings
+
+##### WEB
+- Base directory: `/web`
+- Install: `npm ci --include=dev`
+- Build: `npm run build`
+- Start: `npm run start`
+- Port: `3000`
+- Domain: `https://pulse.pat1.online`
+
+##### API
+- Base directory: `/api`
+- Install: `npm ci --include=dev`
+- Build:
+  - `npm run db:generate`
+  - `npm run build`
+- Start:
+  - `npm run start:prod:migrate`
+- Port: `3001`
+- Domain: `https://api.pulse.pat1.online`
+- Health check: `GET /health`
+
+##### WORKER
+- Base directory: `/api`
+- Install: `npm ci --include=dev`
+- Build:
+  - `npm run db:generate`
+  - `npm run build`
+- Start:
+  - `npm run start:worker`
+- No public domain
+- No exposed port
+- Do not run migrations
+
+#### Database and queue topology
+- ProjectPulse gets its own PostgreSQL database
+- ProjectPulse gets its own Redis instance
+- Do not reuse Directus PostgreSQL
+- PostgreSQL and Redis stay private
+- API + worker share both private services
+- Browser/web never receives `DATABASE_URL` or `REDIS_URL`
+
+Production OAuth callback: `https://api.pulse.pat1.online/auth/github/callback`
 
 The API applies committed Prisma migrations before serving traffic. The worker does not run migrations; it only starts the queue worker process.
 

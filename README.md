@@ -98,6 +98,18 @@ npm run start:worker:dev
 
 These are intended deployment URLs until the production environment is actually verified.
 
+## Production environment notes
+
+`NEXT_PUBLIC_*` values are embedded during the Next.js build, so the production value must be present while the web app is built in Coolify. It is not enough to set the value only at runtime after the build has already completed.
+
+### Private database topology
+- ProjectPulse gets its own PostgreSQL database.
+- ProjectPulse gets its own Redis instance.
+- Do not reuse Directus PostgreSQL.
+- PostgreSQL and Redis stay private.
+- API + worker share both private services.
+- Browser/web never receives `DATABASE_URL` or `REDIS_URL`.
+
 ## Repository layout
 
 ```text
