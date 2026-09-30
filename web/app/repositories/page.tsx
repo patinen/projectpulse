@@ -58,20 +58,20 @@ export default function RepositoriesPage() {
     <AppShell>
       <div className="space-y-6">
         <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-50">Repositories</h1>
-          <p className="text-sm text-slate-400">Select public GitHub repositories to track in ProjectPulse.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-50">Repositories</h1>
+          <p className="text-sm text-neutral-400">Select public GitHub repositories to track in ProjectPulse.</p>
         </header>
 
         {isLoading ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-300">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 text-neutral-300">
             Loading repositories...
           </div>
         ) : error ? (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-200">
+          <div className="rounded-xl border border-neutral-600 bg-neutral-900 p-6 text-neutral-200">
             {error}
           </div>
         ) : repositories.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-8 text-center text-slate-300">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-300">
             No public repositories were found for this account.
           </div>
         ) : (
@@ -79,34 +79,34 @@ export default function RepositoriesPage() {
             {repositories.map((repository) => (
               <article
                 key={repository.githubId}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-sm"
+                className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm"
               >
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium uppercase tracking-[0.2em] text-sky-400">
+                      <span className="text-xs font-medium uppercase tracking-[0.2em] text-neutral-400">
                         {repository.owner}
                       </span>
-                      <span className="text-slate-500">/</span>
+                      <span className="text-neutral-500">/</span>
                       {repository.tracked ? (
                         <Link
                           href={`/repositories/${repository.githubId}`}
-                          className="text-lg font-semibold text-slate-100 hover:text-sky-300"
+                          className="text-lg font-semibold text-neutral-100 hover:text-white"
                         >
                           {repository.name}
                         </Link>
                       ) : (
-                        <span className="text-lg font-semibold text-slate-100">{repository.name}</span>
+                        <span className="text-lg font-semibold text-neutral-100">{repository.name}</span>
                       )}
                     </div>
 
                     {repository.description ? (
-                      <p className="text-sm text-slate-300">{repository.description}</p>
+                      <p className="text-sm text-neutral-300">{repository.description}</p>
                     ) : (
-                      <p className="text-sm text-slate-500">No description provided.</p>
+                      <p className="text-sm text-neutral-500">No description provided.</p>
                     )}
 
-                    <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                    <div className="flex flex-wrap gap-4 text-xs text-neutral-400">
                       {repository.language ? <span>Language: {repository.language}</span> : null}
                       <span>Stars: {repository.stars}</span>
                       <span>Forks: {repository.forks}</span>
@@ -118,7 +118,7 @@ export default function RepositoriesPage() {
                     {repository.tracked ? (
                       <Link
                         href={`/repositories/${repository.githubId}`}
-                        className="inline-flex items-center justify-center rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-300 hover:border-sky-400 hover:text-sky-200"
+                        className="inline-flex items-center justify-center rounded-md border border-neutral-600 bg-neutral-800/80 px-3 py-2 text-sm font-medium text-neutral-200 hover:border-neutral-500 hover:text-white"
                       >
                         View analytics
                       </Link>
@@ -128,7 +128,7 @@ export default function RepositoriesPage() {
                       href={repository.htmlUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500"
+                      className="inline-flex items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-medium text-neutral-200 hover:border-neutral-500 hover:text-white"
                     >
                       GitHub
                     </a>
@@ -139,8 +139,8 @@ export default function RepositoriesPage() {
                       disabled={pendingId === repository.githubId}
                       className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${
                         repository.tracked
-                          ? 'border border-slate-600 bg-slate-800 text-slate-100 hover:border-slate-500'
-                          : 'border border-sky-500 bg-sky-500 text-slate-950 hover:bg-sky-400'
+                          ? 'border border-neutral-600 bg-neutral-800 text-neutral-100 hover:border-neutral-500'
+                          : 'border border-neutral-100 bg-neutral-100 text-neutral-950 hover:bg-white'
                       } ${pendingId === repository.githubId ? 'cursor-not-allowed opacity-60' : ''}`}
                     >
                       {pendingId === repository.githubId

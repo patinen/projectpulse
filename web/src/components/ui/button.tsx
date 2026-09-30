@@ -16,8 +16,8 @@ export function Button({
 }: ButtonProps) {
   const variantClasses =
     variant === 'primary'
-      ? 'border border-sky-400 bg-sky-500 text-slate-950 hover:bg-sky-400'
-      : 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-slate-500 hover:bg-slate-800';
+      ? 'border border-neutral-100 bg-neutral-100 text-neutral-950 hover:bg-white'
+      : 'border border-neutral-700 bg-neutral-900 text-neutral-100 hover:border-neutral-500 hover:text-neutral-50';
 
   return (
     <button

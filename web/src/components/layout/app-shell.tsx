@@ -43,15 +43,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="border-b border-slate-800/90">
+        <header className="border-b border-neutral-800/90">
           <div className="flex h-20 items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-sm font-semibold text-sky-300">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 text-sm font-semibold text-neutral-100">
                 P
               </div>
-              <span className="text-lg font-semibold tracking-tight text-slate-50">
+              <span className="text-lg font-semibold tracking-tight text-neutral-50">
                 ProjectPulse
               </span>
             </div>
@@ -66,8 +66,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                     href={item.href}
                     className={`rounded-md px-3 py-2 text-sm ${
                       isActive
-                        ? 'bg-slate-900 text-slate-50 ring-1 ring-inset ring-slate-700'
-                        : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100'
+                        ? 'bg-neutral-900 text-neutral-50 ring-1 ring-inset ring-neutral-700'
+                        : 'text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100'
                     }`}
                   >
                     {item.label}
@@ -77,20 +77,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             </nav>
 
             {isLoading ? (
-              <div className="h-10 w-20 animate-pulse rounded-md bg-slate-800" />
+              <div className="h-10 w-20 animate-pulse rounded-md bg-neutral-800" />
             ) : user ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5">
+                <div className="flex items-center gap-2 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5">
                   {user.avatarUrl ? (
                     <Image src={user.avatarUrl} alt={user.login} width={28} height={28} className="rounded-full" />
                   ) : (
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-300">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-700 text-xs font-semibold text-neutral-100">
                       {user.login.slice(0, 1).toUpperCase()}
                     </div>
                   )}
                   <div className="leading-tight text-left">
-                    <div className="text-sm font-medium text-slate-50">{user.name ?? user.login}</div>
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">GitHub</div>
+                    <div className="text-sm font-medium text-neutral-50">{user.name ?? user.login}</div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">GitHub</div>
                   </div>
                 </div>
                 <Button variant="secondary" onClick={handleLogout}>
@@ -100,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ) : (
               <a
                 href={githubLoginUrl}
-                className="inline-flex items-center justify-center rounded-md border border-sky-400 bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 shadow-sm hover:bg-sky-400"
+                className="inline-flex items-center justify-center rounded-md border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-950 shadow-sm hover:bg-white"
               >
                 Connect GitHub
               </a>

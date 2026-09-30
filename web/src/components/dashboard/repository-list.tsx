@@ -25,12 +25,12 @@ function formatRelativeTime(value: string | null): string {
 export function RepositoryList({ repositories }: { repositories: DashboardRepositorySummary[] }) {
   if (repositories.length === 0) {
     return (
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+      <section className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-50">Repository overview</h2>
-          <span className="text-xs uppercase tracking-[0.14em] text-slate-500">Summary</span>
+          <h2 className="text-lg font-semibold text-neutral-50">Repository overview</h2>
+          <span className="text-xs uppercase tracking-[0.14em] text-neutral-500">Summary</span>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-sm text-slate-400">
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-4 text-sm text-neutral-400">
           No tracked repositories yet.
         </div>
       </section>
@@ -38,53 +38,53 @@ export function RepositoryList({ repositories }: { repositories: DashboardReposi
   }
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+    <section className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-50">Repository overview</h2>
-        <span className="text-xs uppercase tracking-[0.14em] text-slate-500">Summary</span>
+        <h2 className="text-lg font-semibold text-neutral-50">Repository overview</h2>
+        <span className="text-xs uppercase tracking-[0.14em] text-neutral-500">Summary</span>
       </div>
 
       <div className="space-y-3">
         {repositories.map((repository) => (
           <article
             key={repository.githubId}
-            className="rounded-xl border border-slate-800 bg-slate-950/50 p-3"
+            className="rounded-xl border border-neutral-800 bg-neutral-950/50 p-3"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <Link
                   href={`/repositories/${repository.githubId}`}
-                  className="block truncate text-base font-medium text-slate-100 hover:text-sky-300"
+                  className="block truncate text-base font-medium text-neutral-100 hover:text-white"
                 >
                   {repository.fullName}
                 </Link>
-                <p className="mt-1 text-xs text-slate-500">{repository.language ?? 'Unknown language'}</p>
+                <p className="mt-1 text-xs text-neutral-500">{repository.language ?? 'Unknown language'}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">{formatRelativeTime(repository.lastActivityAt)}</span>
+                <span className="text-xs text-neutral-500">{formatRelativeTime(repository.lastActivityAt)}</span>
                 <a
                   href={`https://github.com/${repository.fullName}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-sky-400 hover:text-sky-300"
+                  className="text-xs text-neutral-300 hover:text-white"
                 >
                   GitHub
                 </a>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-300">
-              <div className="rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-2">
-                <span className="block text-[10px] uppercase tracking-[0.12em] text-slate-500">Issues</span>
-                <span className="mt-2 block text-lg font-semibold text-slate-100">{repository.openIssues}</span>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-neutral-300">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 px-2 py-2">
+                <span className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">Issues</span>
+                <span className="mt-2 block text-lg font-semibold text-neutral-100">{repository.openIssues}</span>
               </div>
-              <div className="rounded-lg border border-slate-800 bg-slate-900/80 px-2 py-2">
-                <span className="block text-[10px] uppercase tracking-[0.12em] text-slate-500">PRs</span>
-                <span className="mt-2 block text-lg font-semibold text-slate-100">{repository.openPullRequests}</span>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 px-2 py-2">
+                <span className="block text-[10px] uppercase tracking-[0.12em] text-neutral-500">PRs</span>
+                <span className="mt-2 block text-lg font-semibold text-neutral-100">{repository.openPullRequests}</span>
               </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+            <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
               <span>Commits (7d): {repository.commits7d}</span>
             </div>
           </article>

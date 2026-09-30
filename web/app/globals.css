@@ -2,12 +2,12 @@
 
 :root {
   color-scheme: dark;
-  --background: #0b0f14;
-  --foreground: #e2e8f0;
-  --muted-foreground: #94a3b8;
-  --panel: #111827;
-  --panel-soft: #0f172a;
-  --border: rgba(148, 163, 184, 0.16);
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+  --muted-foreground: #a3a3a3;
+  --panel: #171717;
+  --panel-soft: #101010;
+  --border: rgba(163, 163, 163, 0.16);
 }
 
 @theme inline {
@@ -40,5 +40,5 @@ a {
 }
 
 ::selection {
-  background: rgba(56, 189, 248, 0.3);
+  background: rgba(212, 212, 212, 0.22);
 }

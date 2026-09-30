@@ -102,36 +102,36 @@ export default function HomePage() {
     <AppShell>
       <div className="space-y-8">
         <header className="space-y-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-sky-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">
             Developer analytics
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-50 sm:text-4xl">
             Engineering overview
           </h1>
-          <p className="max-w-2xl text-sm text-slate-400 sm:text-base">
+          <p className="max-w-2xl text-sm text-neutral-400 sm:text-base">
             Repository activity, pull requests, and engineering health for tracked GitHub repositories.
           </p>
-          <p className="text-xs text-slate-400">{updatedLabel}</p>
+          <p className="text-xs text-neutral-400">{updatedLabel}</p>
         </header>
 
         {isLoading ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-300">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 text-neutral-300">
             Loading dashboard...
           </div>
         ) : isUnauthenticated ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-200">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 text-neutral-200">
             GitHub must be connected to view the engineering dashboard.
           </div>
         ) : error ? (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-200">
+          <div className="rounded-xl border border-neutral-600 bg-neutral-900 p-6 text-neutral-200">
             {error}
           </div>
         ) : dashboard && dashboard.repositories.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-8 text-center text-slate-300">
-            <p className="text-lg font-medium text-slate-100">No repositories are being tracked yet.</p>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-300">
+            <p className="text-lg font-medium text-neutral-100">No repositories are being tracked yet.</p>
             <Link
               href="/repositories"
-              className="mt-4 inline-flex items-center justify-center rounded-md border border-sky-400 bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400"
+              className="mt-4 inline-flex items-center justify-center rounded-md border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-white"
             >
               Go to repositories
             </Link>

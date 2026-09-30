@@ -67,20 +67,20 @@ export default function ActivityPage() {
     <AppShell>
       <div className="space-y-6">
         <header className="space-y-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-sky-400">History</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-50">Activity</h1>
-          <p className="max-w-2xl text-sm text-slate-400">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-neutral-400">History</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-50">Activity</h1>
+          <p className="max-w-2xl text-sm text-neutral-400">
             A historical feed built from persisted dashboard snapshots — never from live GitHub reads.
           </p>
-          <p className="text-xs text-slate-500">Snapshot-derived history may not contain every GitHub event.</p>
+          <p className="text-xs text-neutral-500">Snapshot-derived history may not contain every GitHub event.</p>
         </header>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5">
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4 sm:p-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Range</p>
-                <div className="mt-2 inline-flex rounded-lg border border-slate-700 bg-slate-950 p-1">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Range</p>
+                <div className="mt-2 inline-flex rounded-lg border border-neutral-700 bg-neutral-950 p-1">
                   {rangeOptions.map((option) => (
                     <button
                       key={option}
@@ -88,8 +88,8 @@ export default function ActivityPage() {
                       onClick={() => setRange(option)}
                       className={`rounded-md px-3 py-1.5 text-sm transition ${
                         range === option
-                          ? 'bg-sky-500 text-slate-950'
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                          ? 'bg-neutral-100 text-neutral-950'
+                          : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100'
                       }`}
                     >
                       {option}
@@ -99,7 +99,7 @@ export default function ActivityPage() {
               </div>
 
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Type</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Type</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {kindOptions.map((option) => (
                     <button
@@ -108,8 +108,8 @@ export default function ActivityPage() {
                       onClick={() => setKind(option.value)}
                       className={`rounded-full border px-3 py-1.5 text-sm transition ${
                         kind === option.value
-                          ? 'border-sky-500 bg-sky-500/10 text-sky-300'
-                          : 'border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500 hover:text-slate-100'
+                          ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                          : 'border-neutral-700 bg-neutral-950 text-neutral-300 hover:border-neutral-500 hover:text-neutral-100'
                       }`}
                     >
                       {option.label}
@@ -120,14 +120,14 @@ export default function ActivityPage() {
             </div>
 
             <div className="min-w-0 lg:w-72">
-              <label htmlFor="repository-filter" className="block text-[11px] uppercase tracking-[0.18em] text-slate-500">
+              <label htmlFor="repository-filter" className="block text-[11px] uppercase tracking-[0.18em] text-neutral-500">
                 Repository
               </label>
               <select
                 id="repository-filter"
                 value={repository}
                 onChange={(event) => setRepository(event.target.value)}
-                className="mt-2 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-sky-500"
+                className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 outline-none ring-0 transition focus:border-neutral-400"
               >
                 <option value="all">All repositories</option>
                 {repositories.map((repo) => (
@@ -141,30 +141,30 @@ export default function ActivityPage() {
         </div>
 
         {isLoading ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-slate-300">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 text-neutral-300">
             Loading activity...
           </div>
         ) : error ? (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-200">{error}</div>
+          <div className="rounded-xl border border-neutral-600 bg-neutral-900 p-6 text-neutral-200">{error}</div>
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-300">
               <span>
                 {activity?.meta.eventCount ?? 0} events in view
               </span>
               {activity?.meta.latestSnapshotAt ? (
-                <span className="text-slate-400">Latest snapshot: {formatDate(activity.meta.latestSnapshotAt)}</span>
+                <span className="text-neutral-400">Latest snapshot: {formatDate(activity.meta.latestSnapshotAt)}</span>
               ) : (
-                <span className="text-slate-500">No snapshots yet</span>
+                <span className="text-neutral-500">No snapshots yet</span>
               )}
             </div>
 
             {activity?.meta.latestSnapshotAt === null ? (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center text-slate-300">
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-8 text-center text-neutral-300">
                 No activity snapshots are available for this period yet.
               </div>
             ) : events.length === 0 ? (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center text-slate-300">
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-8 text-center text-neutral-300">
                 No activity matches the selected filters.
               </div>
             ) : (
@@ -175,23 +175,23 @@ export default function ActivityPage() {
                   return (
                     <article
                       key={event.id}
-                      className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 transition hover:border-slate-700"
+                      className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-4 transition hover:border-neutral-700"
                     >
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-300">
+                            <span className="inline-flex rounded-full border border-neutral-600 bg-neutral-800/80 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-neutral-200">
                               {describeKind(event.kind)}
                             </span>
                             {repositoryMetadata && repositoryMetadata.tracked && repositoryMetadata.githubId ? (
                               <Link
                                 href={`/repositories/${repositoryMetadata.githubId}`}
-                                className="text-xs uppercase tracking-[0.18em] text-sky-300 hover:text-sky-200"
+                                className="text-xs uppercase tracking-[0.18em] text-neutral-300 hover:text-white"
                               >
                                 {event.repository}
                               </Link>
                             ) : (
-                              <span className="text-xs uppercase tracking-[0.18em] text-slate-500">{event.repository}</span>
+                              <span className="text-xs uppercase tracking-[0.18em] text-neutral-500">{event.repository}</span>
                             )}
                           </div>
 
@@ -199,12 +199,12 @@ export default function ActivityPage() {
                             href={event.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-3 block text-lg font-medium text-slate-50 hover:text-sky-300"
+                            className="mt-3 block text-lg font-medium text-neutral-50 hover:text-white"
                           >
                             {event.title}
                           </a>
 
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-400">
                             <span>{event.actor ?? 'Unknown actor'}</span>
                             <span>•</span>
                             <span>{formatDate(event.occurredAt)}</span>
@@ -215,7 +215,7 @@ export default function ActivityPage() {
                           href={event.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-medium text-slate-200 hover:border-slate-500 hover:text-white"
+                          className="inline-flex items-center justify-center rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm font-medium text-neutral-200 hover:border-neutral-500 hover:text-white"
                         >
                           Open
                         </a>
