@@ -93,6 +93,44 @@ export type RepositoryAnalyticsResponse = {
   history: RepositoryAnalyticsPoint[];
 };
 
+export type ActivityRange = '7d' | '30d' | '90d';
+export type ActivityKindFilter = 'all' | 'commit' | 'issue' | 'pr';
+export type ActivityEventKind = 'commit pushed' | 'issue opened' | 'pull request merged';
+
+export type ActivityEvent = {
+  id: string;
+  kind: ActivityEventKind;
+  repository: string;
+  title: string;
+  actor: string | null;
+  occurredAt: string;
+  url: string;
+};
+
+export type ActivityRepositoryFilter = {
+  fullName: string;
+  githubId: string | null;
+  tracked: boolean;
+};
+
+export type ActivityResponse = {
+  range: {
+    value: ActivityRange;
+    from: string;
+    to: string;
+  };
+  filters: {
+    kind: ActivityKindFilter;
+    repository: string | null;
+  };
+  repositories: ActivityRepositoryFilter[];
+  events: ActivityEvent[];
+  meta: {
+    eventCount: number;
+    latestSnapshotAt: string | null;
+  };
+};
+
 const defaultApiUrl = 'http://localhost:3001';
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || defaultApiUrl;
 
@@ -258,4 +296,44 @@ export async function getRepositoryAnalytics(
   }
 
   return (await response.json()) as RepositoryAnalyticsResponse;
+}
+
+export async function getActivity(params: {
+  range?: ActivityRange;
+  kind?: ActivityKindFilter;
+  repository?: string | null;
+} = {}): Promise<ActivityResponse> {
+  const searchParams = new URLSearchParams();
+
+  if (params.range) {
+    searchParams.set('range', params.range);
+  }
+
+  if (params.kind) {
+    searchParams.set('kind', params.kind);
+  }
+
+  if (params.repository && params.repository !== 'all') {
+    searchParams.set('repository', params.repository);
+  }
+
+  const query = searchParams.toString();
+  const response = await fetch(`${apiBaseUrl}/activity${query ? `?${query}` : ''}`, {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error('Your session is no longer valid');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Could not load activity: ${response.status}`);
+  }
+
+  return (await response.json()) as ActivityResponse;
 }

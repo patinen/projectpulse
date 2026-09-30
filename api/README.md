@@ -50,11 +50,23 @@ Default API URL: http://localhost:3001
 
 - `GET /health`
 - `GET /dashboard`
+- `GET /activity?range=30d&kind=all&repository=owner/repo`
 - `POST /dashboard/refresh`
 - `GET /repositories`
 - `GET /repositories/:githubId/analytics?range=30d`
 - `POST /repositories/:githubId/track`
 - `DELETE /repositories/:githubId/track`
+
+### Activity feed
+
+ProjectPulse serves activity from PostgreSQL snapshot history only. The endpoint reads the persisted dashboard snapshots for the authenticated user and reconstructs a normalized, deduplicated feed of commit, issue, and pull request history.
+
+- Supported ranges: `7d`, `30d`, `90d`
+- Supported kinds: `all`, `commit`, `issue`, `pr`
+- Optional `repository` filter matches the repository full name exactly
+- Events are de-duplicated by stable event ID across snapshots, with newer snapshots winning when duplicate IDs reappear
+- Contains no live GitHub API calls while browsing the activity page
+- Repository filter options are built from the filtered event set and include tracked status metadata when available
 
 ### Repository analytics
 

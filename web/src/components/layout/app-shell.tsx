@@ -10,7 +10,7 @@ import { getCurrentUser, logout, type AuthUser } from '@/src/lib/api';
 const navigationItems = [
   { label: 'Dashboard', href: '/' },
   { label: 'Repositories', href: '/repositories' },
-  { label: 'Activity', href: '#' },
+  { label: 'Activity', href: '/activity' },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -58,16 +58,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <nav className="hidden items-center gap-2 md:flex" aria-label="Main navigation">
               {navigationItems.map((item) => {
-                const isActive = item.href === '/' ? pathname === '/' : item.href !== '#' && pathname.startsWith(item.href);
+                const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
 
-                return item.href === '#' ? (
-                  <span
-                    key={item.label}
-                    className="cursor-default rounded-md px-3 py-2 text-sm text-slate-500"
-                  >
-                    {item.label}
-                  </span>
-                ) : (
+                return (
                   <Link
                     key={item.label}
                     href={item.href}
