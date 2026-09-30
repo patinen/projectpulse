@@ -13,7 +13,7 @@ import { TokenEncryptionService } from './token-encryption.service.js';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('AUTH_SESSION_SECRET') ?? 'development-secret',
+        secret: configService.get<string>('AUTH_SESSION_SECRET'),
         signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],

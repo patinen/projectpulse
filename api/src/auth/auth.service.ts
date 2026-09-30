@@ -51,7 +51,6 @@ export class AuthService {
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: this.configService.get<string>('GITHUB_CALLBACK_URL') ?? 'http://localhost:3001/auth/github/callback',
-      scope: 'read:user',
       state,
     });
 
@@ -162,16 +161,18 @@ export class AuthService {
   }
 
   async upsertGitHubConnection(userId: string, accessToken: string, tokenType: string | null, scope: string | null): Promise<void> {
+    const accessTokenEncrypted = this.tokenEncryptionService.encrypt(accessToken);
+
     await this.prisma.gitHubConnection.upsert({
       where: { userId },
       update: {
-        accessTokenEncrypted: this.tokenEncryptionService.encrypt(accessToken),
+        accessTokenEncrypted,
         tokenType,
         scope,
       },
       create: {
         userId,
-        accessTokenEncrypted: this.tokenEncryptionService.encrypt(accessToken),
+        accessTokenEncrypted,
         tokenType,
         scope,
       },
@@ -237,7 +238,15 @@ export class AuthService {
       return null;
     }
 
-    return user;
+    const { id, githubId, login, name, avatarUrl } = user;
+
+    return {
+      id,
+      githubId,
+      login,
+      name,
+      avatarUrl,
+    };
   }
 
   async validateSessionToken(token: string): Promise<string> {

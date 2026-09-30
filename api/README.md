@@ -72,3 +72,35 @@ docker compose down
 ```
 
 The frontend app lives in `../web`.
+
+## GitHub OAuth
+
+ProjectPulse uses a GitHub OAuth App for the initial authenticated user flow. The app currently requests only the public identity needed to identify the signed-in developer.
+
+GitHub OAuth App local configuration:
+
+- Homepage URL: http://localhost:3000
+- Redirect URI: http://localhost:3001/auth/github/callback
+- Wildcard matching: disabled
+
+Required environment variables:
+
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `GITHUB_CALLBACK_URL`
+- `WEB_URL`
+- `AUTH_SESSION_SECRET`
+- `GITHUB_TOKEN_ENCRYPTION_KEY`
+
+Generate strong values with Node crypto:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Notes:
+
+- GitHub access tokens are encrypted at rest using AES-256-GCM before persistence.
+- ProjectPulse sessions use an HttpOnly cookie for the signed session.
+- No repository permissions are requested yet; the OAuth app intentionally uses the default public-access profile only.

@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { randomBytes } from 'node:crypto';
 import { AuthGuard } from './auth.guard.js';
 import { AuthenticatedUser, AuthService } from './auth.service.js';
 
@@ -24,8 +23,8 @@ export class AuthController {
   ) {}
 
   @Get('github')
-  githubLogin(@Req() request: Request, @Res() response: Response) {
-    const state = randomBytes(32).toString('hex');
+  githubLogin(@Res() response: Response) {
+    const state = this.authService.createState();
     const cookieOptions = {
       httpOnly: true,
       sameSite: 'lax' as const,
@@ -64,7 +63,15 @@ export class AuthController {
   @Get('me')
   @UseGuards(AuthGuard)
   async getCurrentUser(@Req() request: Request & { user: AuthenticatedUser }) {
-    return request.user;
+    const { id, githubId, login, name, avatarUrl } = request.user;
+
+    return {
+      id,
+      githubId,
+      login,
+      name,
+      avatarUrl,
+    };
   }
 
   @Post('logout')
