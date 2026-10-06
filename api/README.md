@@ -1,220 +1,146 @@
 # ProjectPulse API
 
-This is the ProjectPulse NestJS API.
+Backend and operator guide for the NestJS HTTP API and separate BullMQ worker. See the [root README](../README.md) for the product overview, architecture diagram, full local setup, and roadmap. Repository access is **public only**, limited to repositories returned by the authenticated user's GitHub listing.
 
-## Architecture
+## Local setup
 
-```text
-HTTP API
-    |
-    +--> PostgreSQL snapshots
-    |
-    +--> Redis / BullMQ
-              |
-              v
-        background worker
-              |
-              v
-           GitHub API
-```
-
-The dashboard is now snapshot-backed. The HTTP API reads the latest persisted dashboard snapshot from PostgreSQL, while a background worker refreshes the data in Redis/BullMQ and stores the result as a new snapshot for later use.
-
-## Local development
+Use Node **>=22.22.3 <23** and npm. From `api/`:
 
 ```bash
+npm ci
+cp .env.example .env
 docker compose up -d
-npm run start:dev
-npm run start:worker:dev
-```
-
-From the web app directory:
-
-```bash
-cd ../web
-npm run dev
-```
-
-Default API URL: http://localhost:3001
-
-## Dashboard synchronization behavior
-
-- Dashboard snapshots are synchronized every 15 minutes.
-- Tracking and untracking a repository queues an immediate refresh.
-- Normal dashboard loads read PostgreSQL instead of calling GitHub.
-- The first dashboard load may perform one live fallback sync if no snapshot yet exists.
-- Historical snapshots are retained for future trend reporting.
-- Retention cleanup is intentionally not implemented yet.
-
-## Endpoints
-
-- `GET /health`
-- `GET /dashboard`
-- `GET /activity?range=30d&kind=all&repository=owner/repo`
-- `POST /dashboard/refresh`
-- `GET /repositories`
-- `GET /repositories/:githubId/analytics?range=30d`
-- `POST /repositories/:githubId/track`
-- `DELETE /repositories/:githubId/track`
-
-### Activity feed
-
-ProjectPulse serves activity from PostgreSQL snapshot history only. The endpoint reads the persisted dashboard snapshots for the authenticated user and reconstructs a normalized, deduplicated feed of commit, issue, and pull request history.
-
-- Supported ranges: `7d`, `30d`, `90d`
-- Supported kinds: `all`, `commit`, `issue`, `pr`
-- Optional `repository` filter matches the repository full name exactly
-- Events are de-duplicated by stable event ID across snapshots, with newer snapshots winning when duplicate IDs reappear
-- Contains no live GitHub API calls while browsing the activity page
-- Repository filter options are built from the filtered event set and include tracked status metadata when available
-
-### Production deployment
-
-ProjectPulse supports a simple Coolify/Nixpacks deployment model with three runtime targets.
-
-The API and worker require Node 22.22.3 or newer within the Node 22 line. Nixpacks is pinned via `api/nixpacks.toml` because the previous default archive resolved Node 22.11.0, which is incompatible with the current NestJS and Angular Devkit dependency tree.
-
-#### Coolify runtime settings
-
-##### WEB
-- Base directory: `/web`
-- Install: `npm ci --include=dev`
-- Build: `npm run build`
-- Start: `npm run start`
-- Port: `3000`
-- Domain: `https://pulse.pat1.online`
-
-##### API
-- Base directory: `/api`
-- Install: `npm ci --include=dev`
-- Build:
-  - `npm run db:generate`
-  - `npm run build`
-- Start:
-  - `npm run start:prod:migrate`
-- Port: `3001`
-- Domain: `https://api.pulse.pat1.online`
-- Health check: `GET /health`
-
-##### WORKER
-- Base directory: `/api`
-- Install: `npm ci --include=dev`
-- Build:
-  - `npm run db:generate`
-  - `npm run build`
-- Start:
-  - `npm run start:worker`
-- No public domain
-- No exposed port
-- Do not run migrations
-
-#### Database and queue topology
-- ProjectPulse gets its own PostgreSQL database
-- ProjectPulse gets its own Redis instance
-- Do not reuse Directus PostgreSQL
-- PostgreSQL and Redis stay private
-- API + worker share both private services
-- Browser/web never receives `DATABASE_URL` or `REDIS_URL`
-
-Production OAuth callback: `https://api.pulse.pat1.online/auth/github/callback`
-
-The API applies committed Prisma migrations before serving traffic. The worker does not run migrations; it only starts the queue worker process.
-
-### Repository analytics
-
-ProjectPulse serves repository analytics from PostgreSQL snapshot history only. The endpoint requires the authenticated user to already be tracking the repository.
-
-- Supported ranges: `7d`, `30d`, `90d`
-- `GET /repositories/:githubId/analytics?range=30d`
-- Requires the authenticated user to track the repository
-- Reads only persisted snapshot data; no live GitHub API requests are made while viewing analytics
-- History is built from the final snapshot recorded for each UTC day
-- Current values use the newest stored snapshot for the repository
-- Historical data begins accumulating only after ProjectPulse starts capturing snapshot records
-
-## Environment
-
-Set the following environment variables as needed:
-
-- `PORT` for the API listen port (default: `3001`)
-- `CORS_ORIGIN` for allowed frontend origins
-- `DATABASE_URL` for PostgreSQL connectivity
-- `REDIS_URL` for the BullMQ queue connection
-
-Example:
-
-```bash
-PORT=3001
-CORS_ORIGIN=http://localhost:3000
-DATABASE_URL=postgresql://projectpulse:projectpulse@localhost:5432/projectpulse?schema=public
-REDIS_URL=redis://localhost:6379
-```
-
-## Local infrastructure
-
-Start the database and queue dependencies:
-
-```bash
-docker compose up -d
-```
-
-Generate the Prisma client and run migrations:
-
-```bash
 npm run db:generate
 npm run db:migrate
 ```
 
-Start the API and worker separately:
+Use `Copy-Item .env.example .env` in PowerShell. Fill the OAuth and secret values described below before signing in. The API and worker load `.env.local` before `.env`; keep both files uncommitted.
+
+Start these commands in separate terminals, each from `api/`:
 
 ```bash
 npm run start:dev
+```
+
+```bash
 npm run start:worker:dev
 ```
 
-The frontend app lives in `../web`.
+The API defaults to `http://localhost:3001`. Start the frontend separately using [web/README.md](../web/README.md). Local Compose runs PostgreSQL 16 and Redis 7, publishing ports 5432 and 6379 with a persistent PostgreSQL volume. Its database credentials are development defaults, not production values.
 
-## GitHub OAuth
+## Synchronization and persistence
 
-ProjectPulse uses a GitHub OAuth App for the initial authenticated user flow. The app currently requests only the public identity needed to identify the signed-in developer.
+- The API's `DashboardSyncScheduler` runs cron `*/15 * * * *`: every 15 minutes it queries distinct users with tracked repositories and enqueues one dashboard sync per user. The worker does not host the scheduler.
+- The API produces jobs in the Redis-backed `dashboard-sync` queue. The separate worker consumes them, uses `DashboardAggregationService` to fetch GitHub repository data, and persists the result through `DashboardSnapshotService`.
+- `DashboardSnapshot` stores per-user totals, capture time, and recent activity JSON. Related `RepositoryMetricSnapshot` rows store repository observations. Both are written in one Prisma transaction.
+- BullMQ uses a per-user deduplication ID (`dashboard-sync-<userId>`) for outstanding work, rather than a permanent custom job ID. Later refreshes can run after a job finishes.
+- Jobs have three total attempts and exponential backoff starting at 30 seconds. Completed and failed job retention is capped at 20 and 50 jobs respectively; these queue limits do not delete PostgreSQL snapshots.
+- Tracking/untracking attempts to enqueue an immediate refresh. Queue failures are logged without undoing the tracking operation. Scheduler enqueue failures are logged and processing continues for other users.
+- A sync skips repositories that return not-found errors. Other aggregation or persistence failures reject the job so BullMQ can retry.
+- Dashboard reads return the latest persisted snapshot, including when a later sync fails. If none exists and the user tracks repositories, the HTTP request performs a live fallback aggregation and saves it. With no snapshot and no tracked repositories, it returns an empty dashboard.
+- Tracking changes do not immediately rewrite an existing snapshot; dashboard membership catches up after a successful refresh.
+- PostgreSQL snapshot retention cleanup and stored daily rollups are not implemented. History is not backfilled.
 
-Useful local values:
+Most repository-data aggregation happens in the worker, outside request handling. Exceptions are the dashboard fallback, OAuth token exchange/profile lookup, and repository listing/validation during discovery and tracking. Analytics and activity endpoints make no live GitHub requests.
 
-- Homepage: `http://localhost:3000`
-- Redirect: `http://localhost:3001/auth/github/callback`
-- Wildcard matching: disabled
+## Endpoints
 
-Required environment variables:
+Dashboard, repository, activity, and `/auth/me` endpoints require the `pp_session` cookie. The frontend sends credentialed requests.
 
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
-- `GITHUB_CALLBACK_URL`
-- `WEB_URL`
-- `AUTH_SESSION_SECRET`
-- `GITHUB_TOKEN_ENCRYPTION_KEY`
+| Method / route | Behavior |
+| --- | --- |
+| `GET /health` | Public health check; executes PostgreSQL `SELECT 1`, returns 503 if the database is unavailable. Does not check Redis or worker health. |
+| `GET /auth/github` | Starts OAuth with a state cookie and redirects to GitHub. |
+| `GET /auth/github/callback` | Validates state, exchanges the code, stores encrypted token material, sets the application session, and redirects to `WEB_URL`. |
+| `GET /auth/me` | Returns the authenticated user's profile. |
+| `POST /auth/logout` | Clears the application session cookie; returns 204. |
+| `GET /dashboard` | Latest stored dashboard, with the initial fallback described above. |
+| `POST /dashboard/refresh` | Enqueues synchronization; returns 202 with `{ status: 'queued' }`, or 503 if enqueueing fails. It does not return refreshed metrics. |
+| `GET /repositories` | Live public GitHub repository listing with stored tracking flags, wrapped as `{ repositories }`. |
+| `POST /repositories/:githubId/track` | Validates against the user's public GitHub listing, upserts the repository/tracking relation, and attempts to enqueue refresh. Optional body `githubId` must match the route. |
+| `DELETE /repositories/:githubId/track` | Removes the user's tracking relation and attempts to enqueue refresh; returns 204. Does not delete the repository record. |
+| `GET /repositories/:githubId/analytics?range=30d` | Stored repository metric history for a repository the user currently tracks. |
+| `GET /activity?range=30d&kind=all&repository=owner/repo` | Reconstructed activity from the user's persisted dashboard snapshots. |
 
-Generate the session and encryption secrets locally with Node:
+### Repository analytics
+
+- Ranges: `7d`, `30d`, `90d`; default `30d`. Unsupported values return 400.
+- Requires the user to currently track the repository; otherwise returns 404.
+- Current values come from the newest repository snapshot for that user, independently of the selected history range.
+- History selects the last observation within each UTC day in the requested rolling time window. This is read-time reduction, not a persisted rollup or daily total.
+- Metrics: open issues, open pull requests, and rolling seven-day commits, with current last-activity/capture timestamps and language metadata.
+- With no snapshots, `current` is null and `history` is empty. Historical metric coverage begins with captured observations, not the repository's creation date.
+
+### Activity history
+
+- Ranges: `7d`, `30d`, `90d`; default `30d`.
+- Kinds: `all`, `commit`, `issue`, `pr`; default `all`. Unsupported ranges/kinds return 400.
+- Optional `repository` is a trimmed, exact full-name match.
+- Reads snapshots captured in the selected window, then filters their events by occurrence time. Stable event IDs deduplicate entries, with newer snapshots winning.
+- Repository filter options come from all reconstructed events in the time range, **before** kind/repository filtering, and include current tracking metadata when available.
+- Events are returned newest first, capped at 100. `meta.eventCount` counts all matching events before that cap; `meta.latestSnapshotAt` identifies the latest snapshot in the window.
+- Each dashboard snapshot stores only the ten newest aggregated activity entries across repositories. The feed can retain observed events across snapshots, but is not a complete GitHub event log. Issue entries come from open issues observed during synchronization; PR activity represents merged pull requests.
+
+## Environment and authentication
+
+Use [`.env.example`](.env.example) as the configuration template. Never commit real secrets.
+
+| Variable | Purpose |
+| --- | --- |
+| `NODE_ENV` | Set to `production` for secure OAuth/session cookies. |
+| `PORT` | API listen port; default `3001`. |
+| `CORS_ORIGIN` | Comma-separated allowed frontend origins; default `http://localhost:3000`. Credentialed CORS is enabled. |
+| `DATABASE_URL` | Server-side PostgreSQL connection used by Prisma, API, and worker. |
+| `REDIS_URL` | Server-side BullMQ connection; defaults to local Redis. |
+| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID used by the API. |
+| `GITHUB_CLIENT_SECRET` | OAuth token-exchange secret used by the API. |
+| `GITHUB_CALLBACK_URL` | OAuth callback; default `http://localhost:3001/auth/github/callback`. |
+| `WEB_URL` | Post-login redirect; default `http://localhost:3000`. |
+| `AUTH_SESSION_SECRET` | Signs/verifies the seven-day application JWT session. |
+| `GITHUB_TOKEN_ENCRYPTION_KEY` | Base64 key decoding to exactly 32 bytes for AES-256-GCM encryption of stored GitHub tokens. |
+
+For local OAuth, register homepage `http://localhost:3000` and callback `http://localhost:3001/auth/github/callback`. Run the following twice and assign separate generated values to `AUTH_SESSION_SECRET` and `GITHUB_TOKEN_ENCRYPTION_KEY`:
 
 ```bash
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
-node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
-Set them as:
+The authorization URL sets no explicit `scope` parameter; private repository access is not requested. Public visibility is enforced in repository listing and tracking validation. OAuth state is checked against an HTTP-only cookie. The application session uses the HTTP-only `pp_session` cookie with `SameSite=Lax`, secure in production, and a seven-day lifetime. Stored GitHub token ciphertext includes its encryption version, IV, authentication tag, and ciphertext; the plaintext token is decrypted server-side for GitHub requests.
+
+The worker needs `DATABASE_URL`, `REDIS_URL`, and `GITHUB_TOKEN_ENCRYPTION_KEY`. It also imports the shared auth module through `GitHubModule`; retain `AUTH_SESSION_SECRET` in its environment as documented by the template. It does not execute OAuth token exchange and does not need `GITHUB_CLIENT_SECRET`. Neither database nor Redis credentials belong in `NEXT_PUBLIC_*` variables.
+
+## Production runtime
+
+The live Coolify deployment is recorded in [issue #7](https://github.com/patinen/projectpulse/issues/7), with automatic deployment recorded in [issue #1](https://github.com/patinen/projectpulse/issues/1). The settings below describe the repository's runtime setup; they do not assert a new end-to-end production validation.
+
+API and worker require Node **>=22.22.3 <23**, as declared in `package.json`. `nixpacks.toml` pins the Nixpkgs archive used to resolve a compatible Node environment; the previous default resolved Node 22.11.0, as documented in the deployment history.
+
+| Coolify setting | API | Worker |
+| --- | --- | --- |
+| Base directory | `/api` | `/api` |
+| Install | `npm ci --include=dev` | `npm ci --include=dev` |
+| Build, in order | `npm run db:generate`, `npm run build` | `npm run db:generate`, `npm run build` |
+| Start | `npm run start:prod:migrate` | `npm run start:worker` |
+| Port | `3001` | No HTTP port |
+| Public domain | `https://api.pulse.pat1.online` | None |
+| Health check | `GET /health` | No HTTP health endpoint |
+
+`start:prod:migrate` runs `prisma migrate deploy` before the API starts. The worker starts `node dist/worker.js` and does not run migrations; apply the schema through the API deployment before relying on worker persistence.
+
+Use dedicated private ProjectPulse PostgreSQL and Redis resources shared by API and worker, rather than reusing the Directus database. The public frontend runs separately from `/web` on port 3000. See [web/README.md](../web/README.md) for its build-time API URL requirement.
+
+Production API configuration uses `CORS_ORIGIN` and `WEB_URL` set to `https://pulse.pat1.online`, and `GITHUB_CALLBACK_URL=https://api.pulse.pat1.online/auth/github/callback`. Supply real credentials only through the deployment environment.
+
+## Validation
+
+From `api/`:
 
 ```bash
-AUTH_SESSION_SECRET=<generated-base64-secret>
-GITHUB_TOKEN_ENCRYPTION_KEY=<generated-base64-secret>
+npm ci
+npm run db:generate
+npm run lint
+npm run test
+npm run build
 ```
 
-`GITHUB_TOKEN_ENCRYPTION_KEY` is decoded with `Buffer.from(value, 'base64')` and must resolve to exactly 32 bytes. Use a base64 string for both values for simplicity; do not commit real secrets.
-
-### Repository access
-
-ProjectPulse currently supports public GitHub repositories only.
-
-- `GET /repositories`: lists the authenticated user's public GitHub repositories and whether each is tracked in ProjectPulse.
-- `POST /repositories/:githubId/track`: tracks a selected public repository for the authenticated user.
-- `DELETE /repositories/:githubId/track`: removes the authenticated user's tracking relation without deleting the underlying repository record.
-
-Private repository access will require an explicit future permission upgrade and is intentionally not requested yet.
+`npm run test:watch` and `npm run test:cov` provide watch/coverage modes. `npm run test:e2e` runs the isolated Supertest health-route test with a mocked `AppService`; it does not need live PostgreSQL, Redis, or OAuth credentials and does not verify their integration. For architectural follow-ups, see the [root roadmap](../README.md#current-limitations--roadmap).
